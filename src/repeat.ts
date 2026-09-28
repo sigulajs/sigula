@@ -1,5 +1,4 @@
 import {
-  type AnySlot,
   type BaseContext,
   type Boundary,
   type Commit,
@@ -8,16 +7,16 @@ import {
   extractBoundary,
   isEqual,
   removeBoundary,
-  replaceWithSlot,
+  replaceWithView,
   repleaceWithNode,
   type Sig,
-  type Slot,
   toBoundary,
+  type View,
 } from './common';
 
 export type RepeatProp<T> = {
   key: (item: T) => string;
-  slot: (item: T) => AnySlot;
+  view: (item: T) => View;
   compare?: (a: T, b: T) => boolean;
 };
 
@@ -256,13 +255,13 @@ const _insertNewTrack = <T>(
   prop: RepeatProp<T>,
   fence: Node,
 ): Track<T> => {
-  const slot = prop.slot(item);
-  const boundary = extractBoundary(slot);
-  container.parent.insertBefore(slot.node, fence);
+  const view = prop.view(item);
+  const boundary = extractBoundary(view);
+  container.parent.insertBefore(view.node, fence);
   return {
     key: prop.key(item),
     boundary,
-    childCommits: slot.childCommits,
+    childCommits: view.childCommits,
     item,
   };
 };
@@ -277,14 +276,14 @@ const _setTrack = <T>(
     return old;
   }
 
-  const slot = prop.slot(item);
-  const newBoundary = replaceWithSlot(old.boundary, slot);
+  const view = prop.view(item);
+  const newBoundary = replaceWithView(old.boundary, view);
   _cleanTrack(old);
 
   const newTrack: Track<T> = {
     key: prop.key(item),
     boundary: newBoundary,
-    childCommits: slot.childCommits,
+    childCommits: view.childCommits,
     item,
   };
 
@@ -298,12 +297,12 @@ export const _init = <T>(
 ): DocumentFragment => {
   const frag = document.createDocumentFragment();
   items.forEach((item) => {
-    const slot = prop.slot(item);
+    const view = prop.view(item);
     const key = prop.key(item);
 
-    const boundary = extractBoundary(slot);
-    tracks.push({key, boundary, item, childCommits: slot.childCommits});
-    frag.appendChild(slot.node);
+    const boundary = extractBoundary(view);
+    tracks.push({key, boundary, item, childCommits: view.childCommits});
+    frag.appendChild(view.node);
   });
 
   if (frag.childNodes.length === 0) {
@@ -315,7 +314,7 @@ export const _init = <T>(
 export const repeat = <T>(
   sig: Sig<T[]>,
   prop: RepeatProp<T>,
-): Slot<T[], RepeatContext<T>> => {
+): View<T[], RepeatContext<T>> => {
   const tracks: Track<T>[] = [];
   const frag = _init(sig.get(), prop, tracks);
 
@@ -323,7 +322,7 @@ export const repeat = <T>(
   const bind = createBind(sig, ctx, repeatCmd);
 
   return {
-    type: 'slot',
+    type: 'view',
     node: frag,
     bind,
   };

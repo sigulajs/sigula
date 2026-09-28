@@ -1,6 +1,6 @@
 import type {Patch, PatchContext, PatchItem, Sig, ToPatchItem} from './common';
 
-export const patch = (...toPatchItems: ToPatchItem<unknown>[]): Patch => ({
+export const patch = (...toPatchItems: ToPatchItem<any>[]): Patch => ({
   type: 'patch',
   toPatchItems,
 });

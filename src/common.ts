@@ -29,6 +29,10 @@ export class Sig<T> {
     this.forceUpdate(v);
   }
 
+  trans(fn: (v: T) => T) {
+    this.update(fn(this._val));
+  }
+
   addBind<C extends BaseContext>(bind: Bind<T, C>) {
     this._binds.push(bind as unknown as Bind<T, BaseContext>);
   }
@@ -142,28 +146,6 @@ export interface BaseContext {
   [key: string]: unknown;
 }
 
-// export interface BoundaryContext<T> extends BaseContext {
-//   kind: 'boundary';
-//   boundary: Boundary;
-//   slotFn: (val: T) => Slot;
-// }
-
-// export interface DerivedContext extends BaseContext {
-//   // kind: 'derived';
-//   derived: Sig<unknown>;
-// }
-
-// export interface KeyedContext extends BaseContext {
-//   // kind: 'keyed';
-//   keyed: Map<string, Slot>;
-// }
-
-// export type AvailableContext =
-//   | ElemContext
-//   | BoundaryContext
-//   | DerivedContext
-//   | KeyedContext;
-
 /*
  * Bind: sig - context - cmd
  */
@@ -213,32 +195,18 @@ export type ToPatchItem<T> = (el: Element) => PatchItem<T>;
 
 export interface Patch {
   type: 'patch';
-  toPatchItems: ToPatchItem<unknown>[];
+  toPatchItems: ToPatchItem<any>[];
 }
 
-export interface Slot<T, C extends BaseContext> {
-  type: 'slot';
+export interface View<T = unknown, C extends BaseContext = BaseContext> {
+  type: 'view';
   // frag: DocumentFragment;
   node: Node;
   bind?: Bind<T, C>;
   childCommits?: Commit<unknown, BaseContext>[];
 }
 
-export type AnySlot = Slot<unknown, BaseContext>;
-
-// export interface TextSlot<T> {
-//   type: 'text';
-//   text: Text;
-//   bind?: Bind<T, PatchContext>;
-// }
-
-// export interface BindSlot<T, C extends BaseContext> extends Slot {
-//   bind: Bind<T, C>;
-// }
-
-// export const isBindSlot = <T, C extends BaseContext>(
-//   slot: Slot,
-// ): slot is BindSlot<T, C> => 'bind' in slot;
+export type AnyView = View<any, any>;
 
 export interface Commit<T, C extends BaseContext> {
   binds?: Bind<T, C> | Bind<T, C>[];
@@ -279,23 +247,23 @@ export const commitPatch = (
   return {binds};
 };
 
-// export const commitTextSlot = (
-//   textSlot: TextSlot<unknown>,
+// export const commitTextView = (
+//   textView: TextView<unknown>,
 //   node: Node,
 // ): Commit<unknown, PatchContext> => {
-//   (node as Comment).replaceWith(textSlot.text);
-//   const binds = textSlot.bind ? [textSlot.bind] : [];
+//   (node as Comment).replaceWith(textView.text);
+//   const binds = textView.bind ? [textView.bind] : [];
 //   return {binds};
 // };
 
-export const commitSlot = <T, C extends BaseContext>(
-  slot: Slot<T, C>,
+export const commitView = <T, C extends BaseContext>(
+  view: View<T, C>,
   node: Node,
 ): Commit<T, C> => {
-  (node as Comment).replaceWith(slot.node);
+  (node as Comment).replaceWith(view.node);
   return {
-    binds: slot.bind,
-    children: slot.childCommits,
+    binds: view.bind,
+    children: view.childCommits,
   };
 };
 
@@ -308,8 +276,7 @@ export const toBoundary = (node: Node): Boundary => {
   return b as Boundary;
 };
 
-export const extractBoundary = (slot: AnySlot): Boundary =>
-  toBoundary(slot.node);
+export const extractBoundary = (view: View): Boundary => toBoundary(view.node);
 
 export const repleaceWithNode = (old: Boundary, node: Node) => {
   const newBoundary = toBoundary(node);
@@ -326,21 +293,8 @@ export const repleaceWithNode = (old: Boundary, node: Node) => {
   return newBoundary;
 };
 
-export const replaceWithSlot = (old: Boundary, slot: AnySlot): Boundary => {
-  return repleaceWithNode(old, slot.node);
-  // const newBoundary = extractBoundary(slot);
-
-  // if (old.start === old.end) {
-  //   old.start.parentNode?.replaceChild(slot.node, old.start);
-  // } else {
-  //   const doc = old.start.ownerDocument ?? document;
-  //   const range = doc.createRange();
-  //   range.setStartBefore(old.start);
-  //   range.setEndAfter(old.end);
-  //   range.deleteContents();
-  //   range.insertNode(slot.node);
-  // }
-  // return newBoundary;
+export const replaceWithView = (old: Boundary, view: View): Boundary => {
+  return repleaceWithNode(old, view.node);
 };
 
 export interface SigRecord {
