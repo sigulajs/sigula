@@ -1,4 +1,6 @@
-import {createBind, type PatchContext, Sig, type View} from './common';
+import type {PatchContext} from './patch';
+import {createBind, Sig} from './sig.bind';
+import type {View} from './view';
 
 const textCmd = <T>(val: T, ctx: PatchContext) => {
   ctx.node.textContent = String(val);

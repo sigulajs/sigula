@@ -1,0 +1,29 @@
+{
+  "name": "equation",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "imports": {
+    "#/*": "./src/*",
+    "#root/*": "./*"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "@biomejs/biome": "2.5.14",
+    "@types/node": "26.6.3",
+    "typescript": "7.0.2",
+    "vite": "8.3.1"
+  },
+  "dependencies": {
+    "sigula": "link:../.."
+  }
+}

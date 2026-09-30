@@ -1,12 +1,8 @@
-import {
-  type AnyView,
-  type BaseContext,
-  type Commit,
-  commitPatch,
-  commitView,
-  type Patch,
-  type View,
-} from './common';
+import type {CmdContext} from './cmd';
+import type {Commit} from './commit';
+import type {Patch, PatchContext} from './patch';
+import {type Bind, createBind, Sig} from './sig.bind';
+import type {AnyView, View} from './view';
 
 export const MARK = `@sig_${Math.random().toFixed(9).slice(2)}`;
 
@@ -15,7 +11,7 @@ interface Tpl {
   indexes: number[];
 }
 
-interface Wrap<T, C extends BaseContext> {
+interface Wrap<T, C extends CmdContext> {
   item: Patch | View<T, C>;
   node: Node;
 }
@@ -33,6 +29,36 @@ const _hasMark = (el: Element) => el.hasAttribute(MARK);
 const _removeMark = (el: Element) => el.removeAttribute(MARK);
 const _isView = (item: Comment) => item.data.trim() === MARK;
 
+const commitView = <T, C extends CmdContext>(
+  view: View<T, C>,
+  node: Node,
+): Commit<T, C> => {
+  (node as Comment).replaceWith(view.node);
+  return {
+    binds: view.bind,
+    children: view.childCommits,
+  };
+};
+
+const commitPatch = (
+  patch: Patch,
+  node: Node,
+): Commit<unknown, PatchContext> => {
+  const binds: Bind<unknown, PatchContext>[] = [];
+  patch.toPatchItems.forEach((toPatchItem) => {
+    const item = toPatchItem(node as Element);
+    if (item.source instanceof Sig) {
+      item.cmd(item.source.get(), item.context);
+      binds.push(createBind(item.source, item.context, item.cmd));
+      // binds.push(item.source, item.context, item.cmd);
+    } else {
+      item.cmd(item.source, item.context);
+    }
+  });
+
+  return {binds};
+};
+
 export const html = (
   strs: TemplateStringsArray,
   ...items: (Patch | AnyView)[]
@@ -40,7 +66,7 @@ export const html = (
   // const frag = document.createDocumentFragment();
   let frag: DocumentFragment;
   const itemCount = strs.length - 1;
-  const wraps: Wrap<unknown, BaseContext>[] = [];
+  const wraps: Wrap<unknown, CmdContext>[] = [];
 
   const exist = tplCache.get(strs);
   if (exist) {
@@ -99,18 +125,18 @@ export const html = (
 
         node = walker.nextNode();
         nodeIndex++;
-        walker.currentNode = document;
       }
+      walker.currentNode = document;
     }
 
     tplCache.set(strs, tpl);
   }
 
-  const commits: Commit<unknown, BaseContext>[] = [];
+  const commits: Commit<unknown, CmdContext>[] = [];
   wraps.forEach(({item, node}) => {
     if (item.type === 'patch') {
       commits.push(
-        commitPatch(item, node) as unknown as Commit<unknown, BaseContext>,
+        commitPatch(item, node) as unknown as Commit<unknown, CmdContext>,
       );
     } else if (item.type === 'view') {
       commits.push(commitView(item, node));

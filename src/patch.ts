@@ -1,6 +1,28 @@
-import type {Patch, PatchContext, PatchItem, Sig, ToPatchItem} from './common';
+import type {Cmd, CmdContext} from './cmd';
+import type {Sig} from './sig.bind';
 
-export const patch = (...toPatchItems: ToPatchItem<any>[]): Patch => ({
+export interface PatchContext extends CmdContext {
+  // kind: 'elem';
+  node: Node;
+  extra?: unknown[];
+}
+
+export interface PatchItem<T> {
+  source: T | Sig<T>;
+  context: PatchContext;
+  cmd: Cmd<T, PatchContext>;
+}
+export type ToPatchItem<T> = (el: Element) => PatchItem<T>;
+
+export type AnyPatchItem = PatchItem<any>;
+export type ToAnyPatchItem = (el: Element) => AnyPatchItem;
+
+export interface Patch {
+  type: 'patch';
+  toPatchItems: ToAnyPatchItem[];
+}
+
+export const patch = (...toPatchItems: ToAnyPatchItem[]): Patch => ({
   type: 'patch',
   toPatchItems,
 });

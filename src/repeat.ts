@@ -1,18 +1,14 @@
 import {
-  type BaseContext,
   type Boundary,
-  type Commit,
-  cleanCommit,
-  createBind,
-  extractBoundary,
-  isEqual,
   removeBoundary,
-  replaceWithView,
   repleaceWithNode,
-  type Sig,
   toBoundary,
-  type View,
-} from './common';
+} from './boundary';
+import type {CmdContext} from './cmd';
+import {type Commit, cleanCommit} from './commit';
+import {createBind, type Sig} from './sig.bind';
+import {isEqual} from './utils';
+import {extractBoundary, replaceWithView, type View} from './view';
 
 export type RepeatProp<T> = {
   key: (item: T) => string;
@@ -30,12 +26,12 @@ export interface Track<T> {
   boundary: Boundary;
   item: T;
   key: string;
-  childCommits?: Commit<unknown, BaseContext>[];
+  childCommits?: Commit<unknown, CmdContext>[];
   checked?: boolean;
   cleaned?: boolean;
 }
 
-export interface RepeatContext<T> extends BaseContext {
+export interface RepeatContext<T> extends CmdContext {
   prop: RepeatProp<T>;
   boundary: Boundary;
   tracks: Track<T>[];

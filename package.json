@@ -4,7 +4,8 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "build": "tsc -b"
+    "build": "tsc -b",
+    "watch": "tsc -w"
   },
   "imports": {
     "#/*": "./src/*",

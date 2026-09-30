@@ -1,19 +1,22 @@
-import {
-  type BaseContext,
-  type Boundary,
-  type Commit,
-  cleanCommit,
-  createBind,
-  extractBoundary,
-  replaceWithView,
-  type Sig,
-  type View,
-} from './common';
+import {type Boundary, repleaceWithNode, toBoundary} from './boundary';
+import type {CmdContext} from './cmd';
+import {type Commit, cleanCommit} from './commit';
+import {type Bind, createBind, type Sig} from './sig.bind';
 
-export interface ViewContext<T> extends BaseContext {
+export interface View<T = unknown, C extends CmdContext = CmdContext> {
+  type: 'view';
+  // frag: DocumentFragment;
+  node: Node;
+  bind?: Bind<T, C>;
+  childCommits?: Commit<unknown, CmdContext>[];
+}
+
+export type AnyView = View<any, any>;
+
+export interface ViewContext<T> extends CmdContext {
   // kind: 'view';
   boundary: Boundary;
-  childCommits?: Commit<unknown, BaseContext>[];
+  childCommits?: Commit<unknown, CmdContext>[];
   viewFn: (val: T) => View;
 }
 
@@ -47,4 +50,10 @@ export const view = <T>(
     ...view,
     bind,
   };
+};
+
+export const extractBoundary = (view: View): Boundary => toBoundary(view.node);
+
+export const replaceWithView = (old: Boundary, view: View): Boundary => {
+  return repleaceWithNode(old, view.node);
 };

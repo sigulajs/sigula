@@ -1,4 +1,4 @@
-import type {View} from './common';
+import type {View} from './view';
 
 export const render = (viewArg: View | (() => View), node: Node) => {
   const view = typeof viewArg === 'function' ? viewArg() : viewArg;
