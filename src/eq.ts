@@ -1,3 +1,13 @@
+export interface Equatable {
+  equals(other: unknown): boolean;
+}
+
+const isEquatable = (value: unknown): value is Equatable =>
+  typeof value === 'object' &&
+  value !== null &&
+  'equals' in value &&
+  typeof value.equals === 'function';
+
 export type UnknownRecord = Record<string, unknown>;
 
 const isRecord = (v: unknown): v is UnknownRecord =>
@@ -8,6 +18,8 @@ export const isEqual = <T>(a: T, b: T): boolean => {
   if (typeof a !== typeof b) return false;
 
   if (a === null || b === null || typeof a !== 'object') return false;
+
+  if (isEquatable(a)) return a.equals(b);
 
   // may let Array always return false
   // if (Array.isArray(a) || Array.isArray(b)) return false;

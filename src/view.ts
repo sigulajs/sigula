@@ -1,7 +1,13 @@
 import {type Boundary, repleaceWithNode, toBoundary} from './boundary';
 import type {CmdContext} from './cmd';
 import {type Commit, cleanCommit} from './commit';
-import {type Bind, createBind, type Sig} from './sig.bind';
+import {
+  type AnyBind,
+  type Bind,
+  createBind,
+  removeBind,
+  type Sig,
+} from './sig.bind';
 
 export interface View<T = unknown, C extends CmdContext = CmdContext> {
   type: 'view';
@@ -16,6 +22,7 @@ export type AnyView = View<any, any>;
 export interface ViewContext<T> extends CmdContext {
   // kind: 'view';
   boundary: Boundary;
+  bind?: AnyBind;
   childCommits?: Commit<unknown, CmdContext>[];
   viewFn: (val: T) => View;
 }
@@ -23,16 +30,18 @@ export interface ViewContext<T> extends CmdContext {
 const viewCmd = <T>(val: T, ctx: ViewContext<T>) => {
   const view = ctx.viewFn(val);
   const newBoundary = replaceWithView(ctx.boundary, view);
+  if (ctx.bind) removeBind(ctx.bind);
   ctx.childCommits?.forEach((commit) => {
     cleanCommit(commit);
   });
   ctx.boundary = newBoundary;
+  ctx.bind = view.bind;
   ctx.childCommits = view.childCommits;
 };
 
 export const view = <T>(
   sig: Sig<T>,
-  viewFn: (val: T) => View,
+  viewFn: (val: T) => AnyView,
 ): View<T, ViewContext<T>> => {
   const view = viewFn(sig.get());
 
@@ -40,6 +49,7 @@ export const view = <T>(
 
   const ctx: ViewContext<T> = {
     boundary,
+    bind: view.bind,
     viewFn,
     childCommits: view.childCommits,
   };

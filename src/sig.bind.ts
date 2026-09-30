@@ -1,5 +1,5 @@
 import type {Cmd, CmdContext} from './cmd';
-import {isEqual} from './utils';
+import {type Equatable, isEqual} from './eq';
 
 export interface Bind<T, C extends CmdContext> {
   sig: Sig<T>;
@@ -69,7 +69,6 @@ class Queue {
 
   private flush(): void {
     this.running = true;
-    // console.log('start:', this._binds);
     try {
       while (this.head < this._binds.length) {
         const bind = this._binds[this.head++];
@@ -91,19 +90,23 @@ class Queue {
         this._binds.length = 0;
         this.head = 0;
       }
-      // console.log('end:', this._binds);
     }
   }
 }
 
 const QUEUE = new Queue();
 
-export class Sig<T> {
+export class Sig<T> implements Equatable {
   private _val: T;
   private _binds: Bind<T, CmdContext>[] = [];
 
   constructor(val: T) {
     this._val = val;
+  }
+
+  equals(b: unknown) {
+    if (b instanceof Sig) return isEqual(this.get(), b.get());
+    return false;
   }
 
   get(): T {
@@ -113,11 +116,6 @@ export class Sig<T> {
   forceUpdate(v: T) {
     this._val = v;
     QUEUE.add(...this._binds);
-    // queueMicrotask(() => {
-    //   for (const {removed, cmd, context} of this._binds) {
-    //     if (!removed) cmd(this._val, context);
-    //   }
-    // });
   }
 
   update(v: T) {
@@ -141,7 +139,9 @@ export class Sig<T> {
     }
   }
 
-  cleanup() {}
+  cleanup() {
+    // console.log('Sig.cleanup', this);
+  }
 }
 
 export class DerivedSig<T> extends Sig<T> {
@@ -155,6 +155,8 @@ export class DerivedSig<T> extends Sig<T> {
     this._fromBinds.forEach((bind) => {
       removeBind(bind);
     });
+
+    // console.log('DerivedSig.cleanup', this);
   }
 }
 

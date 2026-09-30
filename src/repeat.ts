@@ -6,8 +6,8 @@ import {
 } from './boundary';
 import type {CmdContext} from './cmd';
 import {type Commit, cleanCommit} from './commit';
-import {createBind, type Sig} from './sig.bind';
-import {isEqual} from './utils';
+import {isEqual} from './eq';
+import {type AnyBind, createBind, removeBind, type Sig} from './sig.bind';
 import {extractBoundary, replaceWithView, type View} from './view';
 
 export type RepeatProp<T> = {
@@ -24,6 +24,7 @@ export interface Container {
 
 export interface Track<T> {
   boundary: Boundary;
+  bind?: AnyBind;
   item: T;
   key: string;
   childCommits?: Commit<unknown, CmdContext>[];
@@ -39,6 +40,7 @@ export interface RepeatContext<T> extends CmdContext {
 
 const _cleanTrack = <T>(track: Track<T>) => {
   removeBoundary(track.boundary);
+  if (track.bind) removeBind(track.bind);
   track.childCommits?.forEach((commit) => {
     cleanCommit(commit);
   });
@@ -257,6 +259,7 @@ const _insertNewTrack = <T>(
   return {
     key: prop.key(item),
     boundary,
+    bind: view.bind,
     childCommits: view.childCommits,
     item,
   };
@@ -279,6 +282,7 @@ const _setTrack = <T>(
   const newTrack: Track<T> = {
     key: prop.key(item),
     boundary: newBoundary,
+    bind: view.bind,
     childCommits: view.childCommits,
     item,
   };
@@ -297,7 +301,13 @@ export const _init = <T>(
     const key = prop.key(item);
 
     const boundary = extractBoundary(view);
-    tracks.push({key, boundary, item, childCommits: view.childCommits});
+    tracks.push({
+      key,
+      boundary,
+      bind: view.bind,
+      item,
+      childCommits: view.childCommits,
+    });
     frag.appendChild(view.node);
   });
 

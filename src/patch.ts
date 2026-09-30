@@ -39,6 +39,18 @@ export const id =
     cmd: idCmd,
   });
 
+const valCmd = <T>(val: T, ctx: PatchContext) => {
+  (ctx.node as unknown as {value: string}).value = String(val);
+};
+
+export const val =
+  <T>(source: T | Sig<T>): ToPatchItem<T> =>
+  (elem: Element): PatchItem<T> => ({
+    source,
+    context: {node: elem},
+    cmd: valCmd,
+  });
+
 const attrCmd = <T>(val: T, ctx: PatchContext) => {
   const key = ctx.extra ? ctx.extra[0] : null;
   if (!key) throw new Error('attrCmd: empty key');
@@ -63,7 +75,7 @@ export type WritableStyleKey = {
 const styleCmd = <T>(val: T, ctx: PatchContext) => {
   const key = ctx.extra ? ctx.extra[0] : null;
   if (!key) throw new Error('attrCmd: empty key');
-  (ctx.elem as HTMLElement).style[key as WritableStyleKey] = String(val);
+  (ctx.node as HTMLElement).style[key as WritableStyleKey] = String(val);
 };
 
 export const style =
