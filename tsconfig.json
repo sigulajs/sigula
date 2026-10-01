@@ -1,36 +1,43 @@
 {
   "compilerOptions": {
-    "composite": true,
-    "declaration": true,
-    "declarationMap": true,
-    "noEmit": false,
-    "rootDir": "src",
-    "outDir": "dist",
-    "target": "es2023",
+    "target": "esnext",
     "module": "esnext",
-    "lib": [
-      "ES2023",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "moduleResolution": "Bundler",
+    //
+    "types": [],
+    //
     "strict": true,
-    "skipLibCheck": true,
-    "experimentalDecorators": true,
-    /* Linting */
+    "noImplicitThis": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "erasableSyntaxOnly": true,
+    "skipLibCheck": true,
+    //
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    //
+    "outDir": "dist",
+    "rootDir": "src",
+    "noEmit": true,
+    //
+    "isolatedModules": true,
+    // "isolatedDeclarations": true,
+    "forceConsistentCasingInFileNames": true,
+    // "esModuleInterop": true,
+    // "allowSyntheticDefaultImports": true,
+    //
+    // "baseUrl": ".",
     "paths": {
-      "#/*": [
-        "./src/*"
-      ],
-      "#root/*": [
-        "./*"
-      ]
+      "#/*": ["./src/*"],
+      "#root/*": ["./*"]
     }
+    //
+    // "composite": true,
   },
-  "include": [
-    "src"
-  ]
+  "include": ["src"]
 }

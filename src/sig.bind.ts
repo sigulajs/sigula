@@ -139,6 +139,10 @@ export class Sig<T> implements Equatable {
     }
   }
 
+  getBinds(): Bind<T, CmdContext>[] {
+    return this._binds;
+  }
+
   cleanup() {
     // console.log('Sig.cleanup', this);
   }
