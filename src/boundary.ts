@@ -44,13 +44,17 @@ export const repleaceWithNode = (old: Boundary, node: Node) => {
   if (!parent)
     throw new Error('replaceWithNode: old boundary has no parentNode');
 
-  let n = old.start.nextSibling;
-  parent.replaceChild(node, old.start);
-  while (n) {
-    const next = n.nextSibling;
-    parent.removeChild(n);
-    if (n === old.end) break;
-    n = next;
+  if (old.start === old.end) {
+    parent.replaceChild(node, old.start);
+  } else {
+    let n = old.start.nextSibling;
+    parent.replaceChild(node, old.start);
+    while (n) {
+      const next = n.nextSibling;
+      parent.removeChild(n);
+      if (n === old.end) break;
+      n = next;
+    }
   }
 
   // if (old.start === old.end) {

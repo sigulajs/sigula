@@ -64,4 +64,40 @@ describe('view', () => {
     expect(b0?.removed).toBe(false);
     expect(b1?.removed).toBe(true);
   });
+
+  it('keeps following siblings when swapping a single-node view', async () => {
+    const isDark = sig(false);
+    render(
+      html`<main>${view(isDark, (v) =>
+        v ? html`<div class="dark"></div>` : html`<div class="light"></div>`,
+      )}<footer>KEPT</footer><aside>ALSO KEPT</aside></main>`,
+      document.body,
+    );
+
+    expect(document.body.innerHTML).toBe(
+      '<main><div class="light"></div><footer>KEPT</footer><aside>ALSO KEPT</aside></main>',
+    );
+
+    isDark.update(true);
+    await Promise.resolve();
+
+    expect(document.body.innerHTML).toBe(
+      '<main><div class="dark"></div><footer>KEPT</footer><aside>ALSO KEPT</aside></main>',
+    );
+  });
+
+  it('keeps following siblings when swapping a single text-node view', async () => {
+    const mode = sig('a');
+    render(
+      html`<p>${view(mode, (v) => text(v.toUpperCase()))}<b>TAIL</b></p>`,
+      document.body,
+    );
+
+    expect(document.body.innerHTML).toBe('<p>A<b>TAIL</b></p>');
+
+    mode.update('b');
+    await Promise.resolve();
+
+    expect(document.body.innerHTML).toBe('<p>B<b>TAIL</b></p>');
+  });
 });

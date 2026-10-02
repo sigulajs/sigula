@@ -266,4 +266,99 @@ describe('repeat', () => {
     expect(item1.getBinds().length).toBe(1);
     expect(item2.getBinds().length).toBe(1);
   });
+
+  describe('single-node item views', () => {
+    interface Item {
+      id: number;
+      label: string;
+    }
+
+    const itemView = (item: Item) => html`<li>${text(item.label)}</li>`;
+
+    const mount = () => {
+      const todos = sig<Item[]>([
+        {id: 1, label: 'a'},
+        {id: 2, label: 'b'},
+        {id: 3, label: 'c'},
+      ]);
+      render(
+        html`<div><ul>${repeat(todos, {
+          key: (item) => item.id.toString(),
+          view: itemView,
+        })}</ul><p>FOOTER</p></div>`,
+        document.body,
+      );
+      return todos;
+    };
+
+    const expected = (labels: string[]) =>
+      `<div><ul>${labels.map((l) => `<li>${l}</li>`).join('')}</ul><p>FOOTER</p></div>`;
+
+    it('keeps sibling items and following content when one item changes', async () => {
+      const todos = mount();
+      expect(document.body.innerHTML).toBe(expected(['a', 'b', 'c']));
+
+      todos.update([
+        {id: 1, label: 'a'},
+        {id: 2, label: 'B*'},
+        {id: 3, label: 'c'},
+      ]);
+      await Promise.resolve();
+
+      expect(document.body.innerHTML).toBe(expected(['a', 'B*', 'c']));
+    });
+
+    it('keeps sibling items and following content when items reorder', async () => {
+      const todos = mount();
+
+      todos.update([
+        {id: 3, label: 'c'},
+        {id: 1, label: 'a'},
+        {id: 2, label: 'b'},
+      ]);
+      await Promise.resolve();
+
+      expect(document.body.innerHTML).toBe(expected(['c', 'a', 'b']));
+    });
+
+    it('keeps following content when items are appended', async () => {
+      const todos = mount();
+
+      todos.update([
+        {id: 1, label: 'a'},
+        {id: 2, label: 'b'},
+        {id: 3, label: 'c'},
+        {id: 4, label: 'd'},
+      ]);
+      await Promise.resolve();
+
+      expect(document.body.innerHTML).toBe(expected(['a', 'b', 'c', 'd']));
+    });
+
+    it('keeps following content when items are removed', async () => {
+      const todos = mount();
+
+      todos.update([
+        {id: 1, label: 'a'},
+        {id: 3, label: 'c'},
+      ]);
+      await Promise.resolve();
+
+      expect(document.body.innerHTML).toBe(expected(['a', 'c']));
+    });
+
+    it('never leaks internal fences into the output', async () => {
+      const todos = mount();
+
+      todos.update([
+        {id: 1, label: 'A*'},
+        {id: 2, label: 'B*'},
+        {id: 3, label: 'C*'},
+      ]);
+      await Promise.resolve();
+
+      expect(document.body.innerHTML).not.toContain('repeat-start-fence');
+      expect(document.body.innerHTML).not.toContain('repeat-end-fence');
+    });
+  });
 });
