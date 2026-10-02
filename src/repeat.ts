@@ -361,7 +361,7 @@ const _setTrack = <T>(
   return newTrack;
 };
 
-export const _init = <T>(
+const _init = <T>(
   items: T[],
   prop: RepeatProp<T>,
   tracks: Track<T>[],
