@@ -2,8 +2,8 @@ import type {CmdContext} from './cmd';
 import {type Bind, removeBind} from './sig.bind';
 
 export interface Commit<T, C extends CmdContext> {
-  binds?: Bind<T, C> | Bind<T, C>[];
-  children?: Commit<unknown, CmdContext>[];
+  binds: Bind<T, C> | Bind<T, C>[] | undefined;
+  children?: Commit<unknown, CmdContext>[] | undefined;
 }
 
 export const cleanCommit = (commit: Commit<unknown, CmdContext>) => {

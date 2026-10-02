@@ -8,6 +8,7 @@ export interface Bind<T, C extends CmdContext> {
   removed: boolean;
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: any bind
 export type AnyBind = Bind<any, any>;
 
 interface QueueOptions {
@@ -72,11 +73,13 @@ class Queue {
     try {
       while (this.head < this._binds.length) {
         const bind = this._binds[this.head++];
-        try {
-          const {removed, sig, context, cmd} = bind;
-          if (!removed) cmd(sig.get(), context);
-        } catch (err) {
-          this.onError(err, bind);
+        if (bind) {
+          try {
+            const {removed, sig, context, cmd} = bind;
+            if (!removed) cmd(sig.get(), context);
+          } catch (err) {
+            this.onError(err, bind);
+          }
         }
       }
     } finally {
@@ -155,7 +158,7 @@ export class DerivedSig<T> extends Sig<T> {
     this._fromBinds.push(bind as unknown as Bind<unknown, CmdContext>);
   }
 
-  cleanup() {
+  override cleanup() {
     this._fromBinds.forEach((bind) => {
       removeBind(bind);
     });

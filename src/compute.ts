@@ -2,6 +2,7 @@ import type {CmdContext} from './cmd';
 import {createBind, DerivedSig, Sig} from './sig.bind';
 
 export interface SigRecord {
+  // biome-ignore lint/suspicious/noExplicitAny: any sig val
   [key: string]: Sig<any>;
 }
 
@@ -14,7 +15,9 @@ export const toValRecord = <S extends SigRecord>(source: S): ValRecord<S> => {
   const vals: Record<string, unknown> = {};
   for (let i = 0; i < keys.length; i++) {
     const k = keys[i];
-    vals[k] = source[k].get();
+    if (k && source[k]) {
+      vals[k] = source[k].get();
+    }
   }
   return vals as ValRecord<S>;
 };
@@ -67,8 +70,10 @@ const _computeRecord = <S extends SigRecord, T>(
   const keys = Object.keys(source);
   for (let i = 0; i < keys.length; i++) {
     const k = keys[i];
-    const bind = createBind(source[k], ctx, computeRecordCmd);
-    target.addFromBind(bind);
+    if (k && source[k]) {
+      const bind = createBind(source[k], ctx, computeRecordCmd);
+      target.addFromBind(bind);
+    }
   }
 
   return target;
@@ -79,6 +84,7 @@ export function compute<S extends SigRecord, T>(
   source: S,
   fn: (v: ValRecord<S>) => T,
 ): DerivedSig<T>;
+// biome-ignore lint/suspicious/noExplicitAny: any source
 export function compute(source: any, fn: (v: any) => any): DerivedSig<any> {
   return source instanceof Sig
     ? _compute(source, fn)

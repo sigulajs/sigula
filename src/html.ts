@@ -2,6 +2,7 @@ import type {CmdContext} from './cmd';
 import type {Commit} from './commit';
 import type {Patch, PatchContext} from './patch';
 import {type Bind, createBind, Sig} from './sig.bind';
+import {at} from './utils';
 import type {AnyView, View} from './view';
 
 export const MARK = `@sig_${Math.random().toFixed(9).slice(2)}`;
@@ -26,7 +27,7 @@ const _toMark = (item: Patch | View): string =>
   item.type === 'patch' ? MARK : `<!--${MARK}-->`;
 
 const _hasMark = (el: Element) => el.hasAttribute(MARK);
-const _removeMark = (el: Element) => el.removeAttribute(MARK);
+const _rmMark = (el: Element) => el.removeAttribute(MARK);
 const _isView = (item: Comment) => item.data.trim() === MARK;
 
 const commitView = <T, C extends CmdContext>(
@@ -82,10 +83,10 @@ export const html = (
       while (existIndex !== undefined) {
         if (nodeIndex === existIndex) {
           if (node === null) throw new Error('empty node');
-          wraps.push({item: items[itemIndex], node});
+          wraps.push({item: at(items, itemIndex), node});
           itemIndex++;
           existIndex = exist.indexes[itemIndex];
-          if (node.nodeType === Node.ELEMENT_NODE) _removeMark(node as Element);
+          if (node.nodeType === Node.ELEMENT_NODE) _rmMark(node as Element);
         }
         node = walker.nextNode();
         nodeIndex++;
@@ -112,13 +113,13 @@ export const html = (
         if (node.nodeType === Node.ELEMENT_NODE) {
           if (_hasMark(node as Element)) {
             tpl.indexes.push(nodeIndex);
-            wraps.push({item: items[wraps.length], node});
-            _removeMark(node as Element);
+            wraps.push({item: at(items, wraps.length), node});
+            _rmMark(node as Element);
           }
         } else if (node.nodeType === Node.COMMENT_NODE) {
           if (_isView(node as Comment)) {
             tpl.indexes.push(nodeIndex);
-            wraps.push({item: items[wraps.length], node});
+            wraps.push({item: at(items, wraps.length), node});
           }
         }
         //
@@ -153,7 +154,7 @@ export const html = (
 const _text = (strs: TemplateStringsArray, ...parts: (Patch | AnyView)[]) => {
   let text = strs[0] ?? '';
   for (let i = 0; i < parts.length; i++) {
-    text += _toMark(parts[i]) + (strs[i + 1] ?? '');
+    text += _toMark(at(parts, i)) + (strs[i + 1] ?? '');
   }
   return text;
 };

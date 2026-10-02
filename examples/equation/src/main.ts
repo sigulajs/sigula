@@ -1,6 +1,6 @@
 import {compute, html, on, patch, render, sig, text, type View} from 'sigula';
 
-const Counter = (): View => {
+const Equation = (): View => {
   const x = sig(0);
   const y = sig(1);
 
@@ -44,4 +44,4 @@ const Counter = (): View => {
 
 const appNode = document.querySelector('#app');
 if (!appNode) throw new Error('#app not found');
-render(Counter(), appNode);
+render(Equation(), appNode);

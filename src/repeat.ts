@@ -8,6 +8,7 @@ import type {CmdContext} from './cmd';
 import {type Commit, cleanCommit} from './commit';
 import {isEqual} from './eq';
 import {type AnyBind, createBind, removeBind, type Sig} from './sig.bind';
+import {at} from './utils';
 import {
   type AnyView,
   extractBoundary,
@@ -29,10 +30,10 @@ export interface Container {
 
 export interface Track<T> {
   boundary: Boundary;
-  bind?: AnyBind;
+  bind?: AnyBind | undefined;
   item: T;
   key: string;
-  childCommits?: Commit<unknown, CmdContext>[];
+  childCommits?: Commit<unknown, CmdContext>[] | undefined;
   checked?: boolean;
   cleaned?: boolean;
 }
@@ -100,37 +101,37 @@ const repeatCmd = <T>(items: T[], ctx: RepeatContext<T>) => {
   let newTail = items.length - 1;
 
   while (oldHead <= oldTail && newHead <= newTail) {
-    if (ctx.tracks[oldHead].checked) {
+    if (ctx.tracks[oldHead]?.checked) {
       // console.log('skip old head', ctx.tracks[oldHead].key);
 
       oldHead++;
-    } else if (ctx.tracks[oldTail].checked) {
+    } else if (ctx.tracks[oldTail]?.checked) {
       // console.log('skip old tail', ctx.tracks[oldTail].key);
 
       oldTail--;
-    } else if (ctx.tracks[oldHead].key === newKeys[newHead]) {
+    } else if (ctx.tracks[oldHead]?.key === newKeys[newHead]) {
       // old head matches new head; update in place
       // console.log('matches head', newKeys[newHead]);
 
       newTracks[newHead] = _setTrack(
-        ctx.tracks[oldHead],
-        items[newHead],
+        at(ctx.tracks, oldHead),
+        at(items, newHead),
         ctx.prop,
       );
       oldHead++;
       newHead++;
-    } else if (ctx.tracks[oldTail].key === newKeys[newTail]) {
+    } else if (ctx.tracks[oldTail]?.key === newKeys[newTail]) {
       // old tail matches nwe tail; update in place
       // console.log('matches tail', newKeys[newTail]);
 
       newTracks[newTail] = _setTrack(
-        ctx.tracks[oldTail],
-        items[newTail],
+        at(ctx.tracks, oldTail),
+        at(items, newTail),
         ctx.prop,
       );
       oldTail--;
       newTail--;
-    } else if (ctx.tracks[oldHead].key === newKeys[newTail]) {
+    } else if (ctx.tracks[oldHead]?.key === newKeys[newTail]) {
       // Old head matches new tail; update and move to new tail
       // console.log(
       //   'Old head matches new tail',
@@ -138,8 +139,8 @@ const repeatCmd = <T>(items: T[], ctx: RepeatContext<T>) => {
       //   newKeys[newTail],
       // );
       newTracks[newTail] = _setTrack(
-        ctx.tracks[oldHead],
-        items[newTail],
+        at(ctx.tracks, oldHead),
+        at(items, newTail),
         ctx.prop,
       );
       //
@@ -147,12 +148,12 @@ const repeatCmd = <T>(items: T[], ctx: RepeatContext<T>) => {
       // _moveTrackBefore(after, newTracks[newTail], newTracks[newTail + 1]);
       _moveTrack(
         container,
-        newTracks[newTail],
+        at(newTracks, newTail),
         _beforeFence(container, newTracks[newTail + 1]),
       );
       oldHead++;
       newTail--;
-    } else if (ctx.tracks[oldTail].key === newKeys[newHead]) {
+    } else if (ctx.tracks[oldTail]?.key === newKeys[newHead]) {
       // old tail matches new head; update and move to new head
       // console.log(
       //   'old tail matches new head',
@@ -161,15 +162,15 @@ const repeatCmd = <T>(items: T[], ctx: RepeatContext<T>) => {
       // );
 
       newTracks[newHead] = _setTrack(
-        ctx.tracks[oldTail],
-        items[newHead],
+        at(ctx.tracks, oldTail),
+        at(items, newHead),
         ctx.prop,
       );
       // if (!before.nextSibling) throw new Error('no before.nextSibling');
       // _moveTrackAfter(before, newTracks[newHead], newTracks[newHead - 1]);
       _moveTrack(
         container,
-        newTracks[newHead],
+        at(newTracks, newHead),
         _afterFence(container, newTracks[newHead - 1]),
       );
       oldTail--;
@@ -182,12 +183,12 @@ const repeatCmd = <T>(items: T[], ctx: RepeatContext<T>) => {
       if (!newKeyToIndexMap.has(oldKeys[oldHead])) {
         // remove old head
         // console.log('remove old head', ctx.tracks[oldHead].key);
-        _cleanTrack(ctx.tracks[oldHead]);
+        _cleanTrack(at(ctx.tracks, oldHead));
         oldHead++;
       } else if (!newKeyToIndexMap.has(oldKeys[oldTail])) {
         // remove old tail
         // console.log('remove old tail', ctx.tracks[oldTail].key);
-        _cleanTrack(ctx.tracks[oldTail]);
+        _cleanTrack(at(ctx.tracks, oldTail));
         oldTail--;
       } else {
         const oldIndex = oldKeyToIndexMap.get(newKeys[newHead]);
@@ -198,11 +199,15 @@ const repeatCmd = <T>(items: T[], ctx: RepeatContext<T>) => {
           //   oldTrack.key,
           //   newKeys[newHead],
           // );
-          newTracks[newHead] = _setTrack(oldTrack, items[newHead], ctx.prop);
+          newTracks[newHead] = _setTrack(
+            oldTrack,
+            at(items, newHead),
+            ctx.prop,
+          );
           // _moveTrackAfter(before, newTracks[newHead], newTracks[newHead - 1]);
           _moveTrack(
             container,
-            newTracks[newHead],
+            at(newTracks, newHead),
             _afterFence(container, newTracks[newHead - 1]),
           );
           oldTrack.checked = true;
@@ -212,7 +217,7 @@ const repeatCmd = <T>(items: T[], ctx: RepeatContext<T>) => {
           // console.log('create new item:', newKeys[newHead]);
           newTracks[newHead] = _insertNewTrack(
             container,
-            items[newHead],
+            at(items, newHead),
             ctx.prop,
             _afterFence(container, newTracks[newHead - 1]),
           );
@@ -226,7 +231,7 @@ const repeatCmd = <T>(items: T[], ctx: RepeatContext<T>) => {
     // console.log('create new head:', newKeys[newHead]);
     newTracks[newHead] = _insertNewTrack(
       container,
-      items[newHead],
+      at(items, newHead),
       ctx.prop,
       _afterFence(container, newTracks[newHead - 1]),
     );
@@ -235,8 +240,8 @@ const repeatCmd = <T>(items: T[], ctx: RepeatContext<T>) => {
 
   while (oldHead <= oldTail) {
     // console.log('remove old head:', ctx.tracks[oldHead].key);
-    if (!ctx.tracks[oldHead].cleaned && !ctx.tracks[oldHead].checked)
-      _cleanTrack(ctx.tracks[oldHead]);
+    if (!ctx.tracks[oldHead]?.cleaned && !ctx.tracks[oldHead]?.checked)
+      _cleanTrack(at(ctx.tracks, oldHead));
     oldHead++;
   }
 
@@ -268,11 +273,7 @@ const _afterFence = <T>(container: Container, track?: Track<T>): Node => {
   return node.nextSibling;
 };
 
-const _moveNodeBefore = (
-  parent: ParentNode,
-  node: Node,
-  child: Node | null,
-) => {
+const _mvNodeBefore = (parent: ParentNode, node: Node, child: Node | null) => {
   if (parent.moveBefore) parent.moveBefore(node, child);
   else parent.insertBefore(node, child);
 };
@@ -281,12 +282,12 @@ const _moveTrack = <T>(container: Container, track: Track<T>, fence: Node) => {
   const parent = container.parent;
 
   if (track.boundary.start === track.boundary.end)
-    _moveNodeBefore(parent, track.boundary.start, fence);
+    _mvNodeBefore(parent, track.boundary.start, fence);
   else {
     let n: Node | null = track.boundary.start;
     while (n) {
       const next: Node | null = n.nextSibling;
-      _moveNodeBefore(parent, n, fence);
+      _mvNodeBefore(parent, n, fence);
       if (n === track.boundary.end) break;
       n = next;
     }

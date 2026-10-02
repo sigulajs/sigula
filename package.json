@@ -1,33 +1,54 @@
 {
   "name": "sigula",
-  "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
+  "author": "zjh <zhanjh@126.com>",
+  "description": "Tiny web framework with fine-grained signal reactivity.",
+  "license": "MIT",
   "type": "module",
   "scripts": {
-    "build:tsc": "tsc -b",
     "build": "tsdown",
-    "watch": "tsc -w",
-    "test": "vitest"
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "imports": {
     "#/*": "./src/*",
     "#root/*": "./*"
   },
-  "exports": {
-    ".": "./dist/sigula.js",
-    "./package.json": "./package.json"
-  },
   "files": [
     "dist"
   ],
-  "types": "./dist/index.d.ts",
+  "sideEffects": false,
   "devDependencies": {
     "@biomejs/biome": "2.5.13",
     "@types/node": "22.20.2",
     "happy-dom": "20.14.5",
+    "publint": "0.3.24",
     "tsdown": "0.23.0",
     "tsx": "4.23.13",
     "typescript": "7.0.2",
     "vitest": "5.0.2"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "frontend",
+    "framework",
+    "signal",
+    "fine-grained",
+    "reactivity",
+    "reactive",
+    "no-virtual-dom",
+    "tiny",
+    "lightweight"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/sigula.d.ts",
+      "import": "./dist/sigula.js",
+      "default": "./dist/sigula.js"
+    },
+    "./package.json": "./package.json"
   }
 }
