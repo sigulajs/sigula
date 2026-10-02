@@ -10,19 +10,20 @@ A minimal, signal-based web framework with fine-grained reactivity. No virtual D
 - Declarative signal sources + precise bindings — describe data sources declaratively with signals, then bind them precisely to the DOM or any effect
 - No virtual DOM — no diffing, no VNodes. Direct real DOM operations with minimal runtime overhead
 - Minimal HTML templates — based on native string templates. No custom compiler, no DSL — just JavaScript strings
-- Ultra small — only ~3.89KB minified + gzipped
+- Batched, coalesced updates — writes are queued in a microtask, so a signal touched many times before the flush runs its bindings once, with the final value
+- Ultra small — under ~4KB minified + gzipped
 - TypeScript friendly — full type inference for signals and template bindings
 - Simple but performant — tiny API surface, low mental overhead, no compromise on performance
 
 ## Installation
 
 ```sh
-npm install sigual
-pnpm add sigual
-yarn add sigual
+npm install sigula
+pnpm add sigula
+yarn add sigula
 ```
 
-## Quck Start
+## Quick Start
 
 ```ts
 import {compute, html, on, patch, render, sig, text, type View} from 'sigula';
@@ -46,11 +47,11 @@ const Equation = (): View => {
   return html`<div>
     <h1>Equation</h1>
     <div>
-      <p>x: ${text(x)} - 
+      <p>x: ${text(x)} -
         <button ${patch(on('click', () => x.trans((v) => v + 1)))}>+1</button>
         <button ${patch(on('click', () => x.trans((v) => v - 1)))}>-1</button>
       </p>
-      <p>y: ${text(y)} - 
+      <p>y: ${text(y)} -
         <button ${patch(on('click', () => y.trans((v) => v + 1)))}>+1</button>
         <button ${patch(on('click', () => y.trans((v) => v - 1)))}>-1</button>
       </p>
@@ -59,8 +60,8 @@ const Equation = (): View => {
       <p>product: x * y = ${text(x)} * ${text(y)} = ${text(product)}</p>
       <p>quotient: x / y = ${text(x)} / ${text(y)} = ${text(quotient)}</p>
       <p>
-        (x + y)(x - y) 
-          = (${text(x)} + ${text(y)})(${text(x)} - ${text(y)}) 
+        (x + y)(x - y)
+          = (${text(x)} + ${text(y)})(${text(x)} - ${text(y)})
           = ${text(sum)}*${text(diff)} = ${text(sumDiffProduct)}
         <br />
         = x^2 - y^2 = ${text(xSquare)} - ${text(ySquare)} = ${text(squareDiff)}
@@ -81,17 +82,17 @@ render(Equation(), appNode);
 Traditional frameworks like React re-run component functions, generate a virtual DOM, diff it, and finally apply changes to the real DOM. Sigula works completely differently:
 
 ```ts
-import {html text} from 'sigula';
+import {html, text} from 'sigula';
 
-const name = sig('Alice')
+const name = sig('Alice');
 
-const App = html`<h1>Hello, ${text(name)}!</h1>`
+const App = html`<h1>Hello, ${text(name)}!</h1>`;
 
 // When name changes, only the text node inside <h1> is updated
-name.update('Bob') // → the text changes from "Hello, Alice!" to "Hello, Bob!"
+name.update('Bob'); // → the text changes from "Hello, Alice!" to "Hello, Bob!"
 ```
 
-Only the exact text node that depends on name is updated. Everything else stays untouched.
+Only the exact text node that depends on `name` is updated. Everything else stays untouched.
 
 ### Declarative signal sources + precise bindings
 
@@ -180,7 +181,7 @@ const Todos = (): View => {
       <button>Add</button>
     </form>
     <div>
-      filter: 
+      filter:
       <button ${patch(on('click', () => filter.update('all')))}>all</button>
       <button ${patch(on('click', () => filter.update('active')))}>active</button>
       <button ${patch(on('click', () => filter.update('done')))}>done</button>
@@ -214,7 +215,7 @@ This means:
 
 ### Minimal HTML templates
 
-Templates are plain JavaScript native string templates. No custom compiler, no .vue files, no JSX transform:
+Templates are plain JavaScript native string templates. No custom compiler, no `.vue` files, no JSX transform:
 
 ```ts
 const App: View = html`
@@ -223,13 +224,544 @@ const App: View = html`
     <p>${text(description)}</p>
     <button ${patch(on('click', handleClick))}>Click me</button>
   </div>
-`
+`;
 ```
 
-html is a tagged template function that returns a mountable template (`View`) object. You can use any editor's syntax highlighting, formatting, and ESLint rules — no extra tooling required.
+`html` is a tagged template function that returns a mountable template (`View`) object. You can use any editor's syntax highlighting, formatting, and ESLint rules — no extra tooling required. Templates are cached per call site, so rendering the same template twice only parses it once.
 
 ### Ultra small
 
-minified + gzipped: ~3.89KB
+minified + gzipped: ~3.8KB
 
+## 📖 Reference
 
+All exports are named exports from `sigula`.
+
+- [Reactivity](#reactivity)
+- [Templates](#templates)
+- [DOM bindings](#dom-bindings)
+- [Control flow](#control-flow)
+- [Rendering](#rendering)
+- [Low-level API](#low-level-api)
+- [Reactivity model](#reactivity-model)
+
+### Reactivity
+
+#### `sig`
+
+```ts
+const sig: <T>(v: T) => Sig<T>;
+```
+
+Creates a writable signal holding `v`.
+
+```ts
+const count = sig(0);
+count.get();          // 0
+count.update(1);      // schedules dependents
+```
+
+#### `Sig<T>`
+
+The core reactive value.
+
+| Member | Signature | Description |
+| --- | --- | --- |
+| `get` | `(): T` | Reads the current value. |
+| `update` | `(v: T): void` | Sets the value and notifies dependents, but only if `isEqual(v, current)` is `false`. |
+| `forceUpdate` | `(v: T): void` | Sets the value and always notifies dependents, even when deeply equal. |
+| `trans` | `(fn: (v: T) => T): void` | Applies `fn` to the current value via `update`, so an equal result is skipped. |
+| `equals` | `(other: unknown): boolean` | `Equatable` implementation; two `Sig`s are equal when their values are deeply equal. |
+| `addBind` | `<C>(bind: Bind<T, C>): void` | Registers a binding. Prefer `createBind` / the `patch`/`text`/`view` APIs. |
+| `removeBind` | `(bind: Bind<T, CmdContext>): void` | Unregisters a binding; runs `cleanup()` when the last one goes away. |
+| `getBinds` | `(): Bind<T, CmdContext>[]` | Returns the current bindings. |
+| `cleanup` | `(): void` | Overridable hook called when a signal loses all bindings. No-op on `Sig`. |
+
+#### `DerivedSig<T>`
+
+A `Sig` produced by `compute`. Extends `Sig` and additionally tracks the source bindings that feed it.
+
+| Member | Signature | Description |
+| --- | --- | --- |
+| `addFromBind` | `<S, C>(bind: Bind<S, C>): void` | Registers a source binding. |
+| `cleanup` | `(): void` | Removes every source binding when the derived signal has no consumers. |
+
+#### `compute`
+
+```ts
+function compute<S, T>(source: Sig<S>, fn: (v: S) => T): DerivedSig<T>;
+function compute<S extends SigRecord, T>(
+  source: S,
+  fn: (v: ValRecord<S>) => T,
+): DerivedSig<T>;
+```
+
+Derives a signal from one source signal, or from a record of signals (whose values are passed as a matching record). The result is recomputed whenever any source changes.
+
+```ts
+const x = sig(1);
+const y = sig(2);
+
+const sum = compute({x, y}, (v) => v.x + v.y);      // DerivedSig<number>
+const doubled = compute(x, (v) => v * 2);           // DerivedSig<number>
+```
+
+Supporting types:
+
+```ts
+interface SigRecord {
+  [key: string]: Sig<any>;
+}
+
+type ValRecord<K extends SigRecord> = {
+  [P in keyof K]: K[P] extends Sig<infer U> ? U : never;
+};
+
+interface ComputeContext<S, T> extends CmdContext {
+  target: Sig<T>;
+  fn: (s: S) => T;
+}
+```
+
+`ValRecord` maps a record of signals to the record of their values, which is what `compute`'s record overload passes to `fn`.
+
+#### `isEqual`
+
+```ts
+const isEqual: <T>(a: T, b: T) => boolean;
+```
+
+Deep structural equality. Compares primitives, arrays, `Date`, `RegExp`, `Map`, `Set`, and plain objects, and defers to `a.equals(b)` when `a` implements `Equatable`. This is the default comparator for `Sig.update` and `repeat`.
+
+#### `Equatable`
+
+```ts
+interface Equatable {
+  equals(other: unknown): boolean;
+}
+```
+
+Implement this on a value type to give `isEqual` custom semantics.
+
+#### `UnknownRecord`
+
+```ts
+type UnknownRecord = Record<string, unknown>;
+```
+
+Convenience alias for an arbitrary string-keyed object, used by the equality and signal-record helpers.
+
+#### `toValRecord`
+
+```ts
+const toValRecord: <S extends SigRecord>(source: S) => ValRecord<S>;
+```
+
+Reads the current value of every signal in a record into a plain record of values. Mostly used internally by `compute`'s record overload.
+
+#### `createBind` / `removeBind`
+
+```ts
+const createBind: <T, C extends CmdContext>(
+  sig: Sig<T>,
+  context: C,
+  cmd: Cmd<T, C>,
+) => Bind<T, C>;
+
+const removeBind: (bind: Bind<unknown, CmdContext>) => void;
+```
+
+Low-level bind management. `createBind` wires `cmd(sig.get(), context)` to run whenever `sig` changes; `removeBind` detaches it. `Bind` is the resulting record:
+
+```ts
+interface Bind<T, C extends CmdContext> {
+  sig: Sig<T>;
+  context: C;
+  cmd: Cmd<T, C>;
+  removed: boolean;
+  queued?: boolean;
+}
+
+type AnyBind = Bind<any, any>;
+```
+
+### Templates
+
+#### `html`
+
+```ts
+const html: (
+  strs: TemplateStringsArray,
+  ...items: (Patch | AnyView)[]
+) => View;
+```
+
+Tagged template that parses native HTML and returns a `View`. Two kinds of interpolation are supported:
+
+- a `View` (from `text`, `view`, `repeat`, or another `html`) fills a content position
+- a `Patch` (from `patch(...)`) fills an attribute position
+
+```ts
+html`<p>${text(label)}</p>`;
+html`<button ${patch(on('click', handler))}>Go</button>`;
+```
+
+Templates are cached per call site, so repeated renders skip parsing. Using `patch(...)` in a content position throws `html: unmatched interpolation; patch() must be in attribute position`.
+
+#### `text`
+
+```ts
+const text: <T>(source: T | Sig<T>) => View<T, PatchContext>;
+```
+
+Creates a text-node view. With a `Sig`, the text updates whenever the signal changes; with a plain value it is static.
+
+```ts
+html`<span>${text(count)}</span>`;
+```
+
+#### `MARK`
+
+```ts
+const MARK: string;
+```
+
+The randomly generated marker attribute/comment name used internally to locate interpolation slots. Exported for advanced tooling; not needed in application code.
+
+#### `View<T, C>` / `AnyView`
+
+```ts
+interface View<T = unknown, C extends CmdContext = CmdContext> {
+  type: 'view';
+  node: Node;
+  bind?: Bind<T, C> | undefined;
+  childCommits?: Commit<unknown, CmdContext>[];
+}
+
+type AnyView = View<any, any>;
+```
+
+`View` is the unit returned by `html`, `text`, `view`, and `repeat`. Its `node` is a DOM node or `DocumentFragment`.
+
+#### `extractBoundary` / `replaceWithView`
+
+```ts
+const extractBoundary: (view: View) => Boundary;
+const replaceWithView: (old: Boundary, view: View) => Boundary;
+```
+
+Helpers used by `view` and `repeat` to mount a view and later swap it. `extractBoundary` wraps `view.node` in a `Boundary`; `replaceWithView` replaces an existing boundary with the view's node and returns the new boundary.
+
+### DOM bindings
+
+#### `patch`
+
+```ts
+const patch: (...toPatchItems: ToAnyPatchItem[]) => Patch;
+```
+
+Declares one or more bindings to apply to the same element. Must be interpolated in an attribute position. Each command (`id`, `val`, `attr`, ...) receives either a plain value (applied once) or a `Sig` (applied on mount and re-applied on change).
+
+```ts
+html`<input ${patch(val(name), attr(placeholder, 'name'))} />`;
+```
+
+#### `id`
+
+```ts
+const id: <T>(source: T | Sig<T>) => ToPatchItem<T>;
+```
+
+Sets the element's `id`.
+
+#### `val`
+
+```ts
+const val: <T>(source: T | Sig<T>) => ToPatchItem<T>;
+```
+
+Sets the element's `value` property (form controls).
+
+#### `attr`
+
+```ts
+const attr: <T>(source: T | Sig<T>, key: string) => ToPatchItem<T>;
+```
+
+Sets attribute `key`. Use this for boolean/ARIA/data attributes.
+
+#### `style`
+
+```ts
+const style: <T>(
+  source: T | Sig<T>,
+  key: WritableStyleKey,
+) => ToPatchItem<T>;
+```
+
+Sets an inline style property by typed name.
+
+```ts
+html`<span ${patch(style(color, 'color'))}>text</span>`;
+```
+
+`WritableStyleKey` is the union of `CSSStyleDeclaration` keys whose values are strings.
+
+#### `styleProperty`
+
+```ts
+const styleProperty: <T>(source: T | Sig<T>, key: string) => ToPatchItem<T>;
+```
+
+Sets a style property via `CSSStyleDeclaration.setProperty`. Use this for custom properties (`--my-var`) or untyped names.
+
+```ts
+html`<div ${patch(styleProperty(size, '--size'))}></div>`;
+```
+
+#### `toggleClass`
+
+```ts
+const toggleClass: <T>(source: T | Sig<T>, token: string) => ToPatchItem<T>;
+```
+
+Toggles a single class from the truthiness of the value.
+
+#### `toggleClasses`
+
+```ts
+const toggleClasses: <T>(
+  source: T | Sig<T>,
+  ...tokens: string[]
+) => ToPatchItem<T>;
+```
+
+Toggles several classes from one value.
+
+#### `act`
+
+```ts
+type ActFn<T> = (node: Node, val?: T) => void;
+const act: <T>(source: T | Sig<T>, fn: ActFn<T>) => ToPatchItem<T>;
+```
+
+Runs arbitrary code with the bound node and value; runs on mount and again on change. Use it as the escape hatch for anything the built-in commands do not cover.
+
+```ts
+html`<canvas ${patch(act(frame, (node, v) => draw(node, v)))}></canvas>`;
+```
+
+#### `on`
+
+```ts
+const on: <K extends keyof HTMLElementEventMap>(
+  type: K,
+  listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => unknown,
+  options?: boolean | AddEventListenerOptions,
+) => ToPatchItem<
+  (this: HTMLElement, ev: HTMLElementEventMap[K]) => unknown
+>;
+```
+
+Adds a DOM event listener. The listener is registered once at mount; it is not a reactive source, so combine it with `sig` writes to drive updates.
+
+```ts
+html`<button ${patch(on('click', () => count.trans((v) => v + 1)))}>+1</button>`;
+```
+
+#### Patch types
+
+```ts
+interface PatchContext extends CmdContext {
+  node: Node;
+  extra?: unknown[];
+}
+
+interface PatchItem<T> {
+  source: T | Sig<T>;
+  context: PatchContext;
+  cmd: Cmd<T, PatchContext>;
+}
+
+type ToPatchItem<T> = (el: Element) => PatchItem<T>;
+type AnyPatchItem = PatchItem<any>;
+type ToAnyPatchItem = (el: Element) => AnyPatchItem;
+
+interface Patch {
+  type: 'patch';
+  toPatchItems: ToAnyPatchItem[];
+}
+```
+
+`ToPatchItem` defers reading the target element until mount. `patch` collects these factories into a single `Patch`.
+
+### Control flow
+
+#### `view`
+
+```ts
+const view: <T>(
+  sig: Sig<T>,
+  viewFn: (val: T) => AnyView,
+) => View<T, ViewContext<T>>;
+```
+
+Conditionally renders one view or another. Whenever `sig` changes, `viewFn` is called with the new value, the previous view is torn down, and a new one is mounted in its place.
+
+```ts
+html`<div>${view(isEmpty, (v) => (v ? text('empty') : list))}</div>`;
+```
+
+The context carried by a `view` binding:
+
+```ts
+interface ViewContext<T> extends CmdContext {
+  boundary: Boundary;
+  bind?: AnyBind | undefined;
+  childCommits?: Commit<unknown, CmdContext>[] | undefined;
+  viewFn: (val: T) => View;
+}
+```
+
+#### `repeat`
+
+```ts
+interface RepeatProp<T> {
+  key: (item: T) => string;
+  view: (item: T) => AnyView;
+  compare?: (a: T, b: T) => boolean;
+}
+
+const repeat: <T>(sig: Sig<T[]>, prop: RepeatProp<T>) => View<T[], RepeatContext<T>>;
+```
+
+Keyed list rendering. On each change Sigula matches items by `key`, then reuses, moves, creates, or removes as few DOM nodes as possible. `compare` defaults to `isEqual`; when an item is deeply equal to the track it already occupies, the track is reused without rebuilding its view. An empty array renders `<!--empty-list-->`.
+
+```ts
+html`<ul>${repeat(todos, {
+  key: (item) => item.id.toString(),
+  view: (item) => html`<li>${text(item.label)}</li>`,
+})}</ul>`;
+```
+
+`key` must be unique and stable for a given item. `compare` is useful when item identity is structural but you want to force or skip updates.
+
+#### `repeat` types
+
+```ts
+interface Container {
+  parent: ParentNode;
+  startFence: Node;
+  endFence: Node;
+}
+
+interface Track<T> {
+  boundary: Boundary;
+  bind?: AnyBind | undefined;
+  item: T;
+  key: string;
+  childCommits?: Commit<unknown, CmdContext>[] | undefined;
+  checked?: boolean;
+  cleaned?: boolean;
+}
+
+interface RepeatContext<T> extends CmdContext {
+  prop: RepeatProp<T>;
+  boundary: Boundary;
+  tracks: Track<T>[];
+}
+```
+
+These describe the internal bookkeeping of a `repeat`. Exposed for advanced integrations; application code should not need them.
+
+### Rendering
+
+#### `render`
+
+```ts
+const render: (viewArg: AnyView | (() => AnyView), node: Node) => void;
+```
+
+Mounts a view into `node` by appending `view.node`. Accepts a `View` directly or a factory function that returns one.
+
+```ts
+render(App(), document.querySelector('#app')!);
+render(() => html`<p>lazy</p>`, document.body);
+```
+
+### Low-level API
+
+These utilities power the framework and are exported for extension and testing.
+
+#### `Boundary`
+
+```ts
+interface Boundary {
+  start: Node;
+  end: Node;
+}
+```
+
+An inclusive range of sibling nodes (`start` through `end`).
+
+#### `toBoundary`
+
+```ts
+const toBoundary: (node: Node) => Boundary;
+```
+
+Wraps a node in a `Boundary`. For a `DocumentFragment`, the boundary spans its first and last child; otherwise it covers the node itself. Throws `toBoundary: empty fragment` on an empty fragment.
+
+#### `removeBoundary`
+
+```ts
+const removeBoundary: (b: Boundary) => void;
+```
+
+Removes every node in the boundary. A no-op if the boundary has no parent.
+
+#### `replaceWithNode`
+
+```ts
+const replaceWithNode: (old: Boundary, node: Node) => Boundary;
+```
+
+Replaces an entire boundary with `node` and returns the new boundary. Throws if `old` has no parent. This is the primitive behind dynamic `view` and `repeat` swaps.
+
+#### `Cmd` / `AnyCmd` / `CmdContext`
+
+```ts
+interface CmdContext {
+  [key: string]: unknown;
+}
+
+type Cmd<T, C extends CmdContext> = (val: T, context: C) => void;
+type AnyCmd = Cmd<any, any>;
+```
+
+A `Cmd` is the unit of work a binding runs: it receives the current signal value and its context.
+
+#### `Commit` / `cleanCommit`
+
+```ts
+interface Commit<T, C extends CmdContext> {
+  binds: Bind<T, C> | Bind<T, C>[] | undefined;
+  children?: Commit<unknown, CmdContext>[] | undefined;
+}
+
+const cleanCommit: (commit: Commit<unknown, CmdContext>) => void;
+```
+
+A `Commit` groups the bindings created by mounting a view; `cleanCommit` recursively removes them all. `View.childCommits` carries these so a parent can tear a whole subtree down at once.
+
+### Reactivity model
+
+- **Batched.** When a signal changes, its bindings are queued, not run synchronously.
+- **Coalesced per binding.** A binding that is written to multiple times before the microtask flush runs once, reading the signal's final value. `sig.update(1); sig.update(2); sig.update(3)` runs each dependent binding a single time against `3`.
+- **`update` vs `forceUpdate`.** `update` skips work when the new value is deeply equal to the current one; `forceUpdate` always notifies. Use `forceUpdate` when a value is structurally equal but you still need a re-render (for example, mutating an object in place).
+- **Error isolation.** A throwing binding does not stop the rest of the queue; the error is logged as `console.error('[Queue] task failed:', error, bind)`.
+- **Deep equality by default.** `update`, `compute`, and `repeat` compare with `isEqual`, so replacing `{a: 1}` with another `{a: 1}` is a no-op.
+
+## License
+
+MIT
