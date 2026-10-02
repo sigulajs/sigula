@@ -48,7 +48,7 @@ class Queue {
             const {removed, sig, context, cmd} = bind;
             if (!removed) cmd(sig.get(), context);
           } catch (err) {
-            console.error('[CallbackQueue] task failed:', err, bind);
+            console.error('[Queue] task failed:', err, bind);
           } finally {
             // re-arm after running: cmd reads sig.get() at call time, so a bind
             // that runs after a write already sees the newest value and must

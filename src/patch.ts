@@ -118,7 +118,7 @@ export type ActFn<T> = (node: Node, val?: T) => void;
 
 const actCmd = <T>(val: T, ctx: PatchContext) => {
   const fn = ctx.extra?.[0] as ActFn<T> | undefined;
-  if (!fn) throw new Error('actCmd error: no function');
+  if (!fn) throw new Error('patch: no function');
   fn(ctx.node, val);
 };
 
@@ -136,7 +136,7 @@ const onCmd = (listener: unknown, ctx: PatchContext) => {
     | boolean
     | AddEventListenerOptions
     | undefined;
-  if (!type) throw new Error('onCmd no type');
+  if (!type) throw new Error('patch: no event type');
   ctx.node.addEventListener(
     type,
     listener as EventListenerOrEventListenerObject,

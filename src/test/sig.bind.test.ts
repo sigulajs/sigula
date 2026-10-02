@@ -177,7 +177,7 @@ describe('queue coalescing', () => {
 
     expect(ran).toBe(1);
     expect(spy).toHaveBeenCalledWith(
-      '[CallbackQueue] task failed:',
+      '[Queue] task failed:',
       expect.any(Error),
       expect.anything(),
     );

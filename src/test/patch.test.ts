@@ -156,6 +156,25 @@ describe('patch', () => {
     );
   });
 
+  it('names itself consistently in its own errors', () => {
+    const node = document.createElement('div');
+    expect(() =>
+      act('x', () => {})(node).cmd('x', {node, extra: []}),
+    ).toThrowError('patch: no function');
+    expect(() =>
+      on('click', () => {})(node).cmd(() => {}, {node, extra: []}),
+    ).toThrowError('patch: no event type');
+  });
+
+  it('throws when a patch is used in child position', () => {
+    const s = sig('a');
+    // the marker for a patch is an attribute token, so in child position it
+    // renders as text and the command would silently never be bound
+    expect(() => html`<div>${patch(id(s))}</div>`).toThrowError(
+      'html: unmatched interpolation; patch() must be in attribute position',
+    );
+  });
+
   it('binds correctly on a second render of the same template', async () => {
     // calling the same template literal site twice hits the template cache,
     // which locates slots by index instead of by marker

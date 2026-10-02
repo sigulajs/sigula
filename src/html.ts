@@ -131,6 +131,11 @@ export const html = (
     tplCache.set(strs, tpl);
   }
 
+  if (wraps.length !== items.length)
+    throw new Error(
+      'html: unmatched interpolation; patch() must be in attribute position',
+    );
+
   const commits: Commit<unknown, CmdContext>[] = [];
   wraps.forEach(({item, node}) => {
     if (item.type === 'patch') {
