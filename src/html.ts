@@ -5,7 +5,7 @@ import {type Bind, createBind, Sig} from './sig.bind';
 import {at} from './utils';
 import type {AnyView, View} from './view';
 
-export const MARK = `@sig_${Math.random().toFixed(9).slice(2)}`;
+const MARK = `@sig_${Math.random().toFixed(9).slice(2)}`;
 
 interface Tpl {
   el: HTMLTemplateElement;

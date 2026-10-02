@@ -22,13 +22,13 @@ export type RepeatProp<T> = {
   compare?: (a: T, b: T) => boolean;
 };
 
-export interface Container {
+interface Container {
   parent: ParentNode;
   startFence: Node;
   endFence: Node;
 }
 
-export interface Track<T> {
+interface Track<T> {
   boundary: Boundary;
   bind?: AnyBind | undefined;
   item: T;
@@ -38,7 +38,7 @@ export interface Track<T> {
   cleaned?: boolean;
 }
 
-export interface RepeatContext<T> extends CmdContext {
+interface RepeatContext<T> extends CmdContext {
   prop: RepeatProp<T>;
   boundary: Boundary;
   tracks: Track<T>[];

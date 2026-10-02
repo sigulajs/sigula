@@ -10,7 +10,7 @@ export type ValRecord<K extends SigRecord> = {
   [P in keyof K]: K[P] extends Sig<infer U> ? U : never;
 };
 
-export const toValRecord = <S extends SigRecord>(source: S): ValRecord<S> => {
+const toValRecord = <S extends SigRecord>(source: S): ValRecord<S> => {
   const keys = Object.keys(source);
   const vals: Record<string, unknown> = {};
   for (let i = 0; i < keys.length; i++) {
@@ -22,7 +22,7 @@ export const toValRecord = <S extends SigRecord>(source: S): ValRecord<S> => {
   return vals as ValRecord<S>;
 };
 
-export interface ComputeContext<S, T> extends CmdContext {
+interface ComputeContext<S, T> extends CmdContext {
   // source: Sig<S>;
   target: Sig<T>;
   fn: (s: S) => T;

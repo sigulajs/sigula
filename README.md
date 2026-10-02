@@ -316,11 +316,6 @@ interface SigRecord {
 type ValRecord<K extends SigRecord> = {
   [P in keyof K]: K[P] extends Sig<infer U> ? U : never;
 };
-
-interface ComputeContext<S, T> extends CmdContext {
-  target: Sig<T>;
-  fn: (s: S) => T;
-}
 ```
 
 `ValRecord` maps a record of signals to the record of their values, which is what `compute`'s record overload passes to `fn`.
@@ -350,14 +345,6 @@ type UnknownRecord = Record<string, unknown>;
 ```
 
 Convenience alias for an arbitrary string-keyed object, used by the equality and signal-record helpers.
-
-#### `toValRecord`
-
-```ts
-const toValRecord: <S extends SigRecord>(source: S) => ValRecord<S>;
-```
-
-Reads the current value of every signal in a record into a plain record of values. Mostly used internally by `compute`'s record overload.
 
 #### `createBind` / `removeBind`
 
@@ -419,14 +406,6 @@ Creates a text-node view. With a `Sig`, the text updates whenever the signal cha
 ```ts
 html`<span>${text(count)}</span>`;
 ```
-
-#### `MARK`
-
-```ts
-const MARK: string;
-```
-
-The randomly generated marker attribute/comment name used internally to locate interpolation slots. Exported for advanced tooling; not needed in application code.
 
 #### `View<T, C>` / `AnyView`
 
@@ -603,24 +582,13 @@ interface Patch {
 const view: <T>(
   sig: Sig<T>,
   viewFn: (val: T) => AnyView,
-) => View<T, ViewContext<T>>;
+) => View<T>;
 ```
 
 Conditionally renders one view or another. Whenever `sig` changes, `viewFn` is called with the new value, the previous view is torn down, and a new one is mounted in its place.
 
 ```ts
 html`<div>${view(isEmpty, (v) => (v ? text('empty') : list))}</div>`;
-```
-
-The context carried by a `view` binding:
-
-```ts
-interface ViewContext<T> extends CmdContext {
-  boundary: Boundary;
-  bind?: AnyBind | undefined;
-  childCommits?: Commit<unknown, CmdContext>[] | undefined;
-  viewFn: (val: T) => View;
-}
 ```
 
 #### `repeat`
@@ -632,7 +600,7 @@ interface RepeatProp<T> {
   compare?: (a: T, b: T) => boolean;
 }
 
-const repeat: <T>(sig: Sig<T[]>, prop: RepeatProp<T>) => View<T[], RepeatContext<T>>;
+const repeat: <T>(sig: Sig<T[]>, prop: RepeatProp<T>) => View<T[]>;
 ```
 
 Keyed list rendering. On each change Sigula matches items by `key`, then reuses, moves, creates, or removes as few DOM nodes as possible. `compare` defaults to `isEqual`; when an item is deeply equal to the track it already occupies, the track is reused without rebuilding its view. An empty array renders `<!--empty-list-->`.
@@ -645,34 +613,6 @@ html`<ul>${repeat(todos, {
 ```
 
 `key` must be unique and stable for a given item. `compare` is useful when item identity is structural but you want to force or skip updates.
-
-#### `repeat` types
-
-```ts
-interface Container {
-  parent: ParentNode;
-  startFence: Node;
-  endFence: Node;
-}
-
-interface Track<T> {
-  boundary: Boundary;
-  bind?: AnyBind | undefined;
-  item: T;
-  key: string;
-  childCommits?: Commit<unknown, CmdContext>[] | undefined;
-  checked?: boolean;
-  cleaned?: boolean;
-}
-
-interface RepeatContext<T> extends CmdContext {
-  prop: RepeatProp<T>;
-  boundary: Boundary;
-  tracks: Track<T>[];
-}
-```
-
-These describe the internal bookkeeping of a `repeat`. Exposed for advanced integrations; application code should not need them.
 
 ### Rendering
 
