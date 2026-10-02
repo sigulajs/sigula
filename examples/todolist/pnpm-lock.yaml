@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       sigula:
-        specifier: link:../..
-        version: link:../..
+        specifier: 1.0.0
+        version: 1.0.0
     devDependencies:
       '@biomejs/biome':
         specifier: 2.5.14
@@ -422,6 +422,10 @@ packages:
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
 
+  sigula@1.0.0:
+    resolution: {integrity: sha512-ZWs0lobt+CXAt/3EB60Ff9ElxoVzf1G6yqykIr2iwvhUhXglcMIs9gvAijaNLD4TmTMy0vT2QUA5I04bY9YUhg==}
+    engines: {node: ^24.21.0, pnpm: ^12.8.1}
+
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
@@ -721,6 +725,8 @@ snapshots:
       '@rolldown/binding-openharmony-arm64': 1.2.11
       '@rolldown/binding-win32-arm64-msvc': 1.2.11
       '@rolldown/binding-win32-x64-msvc': 1.2.11
+
+  sigula@1.0.0: {}
 
   source-map-js@1.2.1: {}
 
