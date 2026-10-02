@@ -12,39 +12,11 @@ export interface Bind<T, C extends CmdContext> {
 // biome-ignore lint/suspicious/noExplicitAny: any bind
 export type AnyBind = Bind<any, any>;
 
-interface QueueOptions {
-  schedule?: (cb: () => void) => void;
-  onError?: (err: unknown, bind: AnyBind) => void;
-}
-
 class Queue {
   private _binds: AnyBind[] = [];
   private head = 0;
   private running = false;
   private scheduled = false;
-
-  private readonly scheduleFn: (cb: () => void) => void;
-  private readonly onError: (err: unknown, bind: AnyBind) => void;
-
-  constructor(options: QueueOptions = {}) {
-    const defaultOnError = (err: unknown, bind: AnyBind): void => {
-      console.error('[CallbackQueue] task failed:', err, bind);
-    };
-    this.scheduleFn = options.schedule ?? ((cb) => queueMicrotask(cb));
-    this.onError = options.onError ?? defaultOnError;
-  }
-
-  get size(): number {
-    return this._binds.length - this.head;
-  }
-
-  get isRunning(): boolean {
-    return this.running;
-  }
-
-  get isScheduled(): boolean {
-    return this.scheduled;
-  }
 
   addAll(binds: readonly AnyBind[]): this {
     for (const bind of binds) {
@@ -52,19 +24,14 @@ class Queue {
       bind.queued = true;
       this._binds.push(bind);
     }
-    if (this.size > 0) this.kick();
+    if (this._binds.length > this.head) this.kick();
     return this;
-  }
-
-  clear(): void {
-    this._binds.length = 0;
-    this.head = 0;
   }
 
   private kick(): void {
     if (this.running || this.scheduled) return;
     this.scheduled = true;
-    this.scheduleFn(() => {
+    queueMicrotask(() => {
       this.running = true;
       this.scheduled = false;
       this.flush();
@@ -81,7 +48,7 @@ class Queue {
             const {removed, sig, context, cmd} = bind;
             if (!removed) cmd(sig.get(), context);
           } catch (err) {
-            this.onError(err, bind);
+            console.error('[CallbackQueue] task failed:', err, bind);
           } finally {
             // re-arm after running: cmd reads sig.get() at call time, so a bind
             // that runs after a write already sees the newest value and must

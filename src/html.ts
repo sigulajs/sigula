@@ -60,43 +60,54 @@ const commitPatch = (
   return {binds};
 };
 
+// Both template passes walk the same tree hunting for the next interpolation
+// slot and then do exactly the same thing with it; only the way a slot is
+// recognised differs, so that part is the only argument.
+const _scan = (
+  frag: DocumentFragment,
+  items: (Patch | AnyView)[],
+  wraps: Wrap<unknown, CmdContext>[],
+  hit: (node: Node, nodeIndex: number, itemIndex: number) => boolean,
+  indexes?: number[],
+) => {
+  walker.currentNode = frag;
+  let node = walker.nextNode();
+  let nodeIndex = 0;
+  let itemIndex = 0;
+  while (node !== null && itemIndex < items.length) {
+    if (hit(node, nodeIndex, itemIndex)) {
+      wraps.push({item: at(items, itemIndex), node});
+      if (indexes) indexes.push(nodeIndex);
+      itemIndex++;
+      if (node.nodeType === Node.ELEMENT_NODE) _rmMark(node as Element);
+    }
+    node = walker.nextNode();
+    nodeIndex++;
+  }
+  // https://github.com/lit/lit/blob/c42ee1e96b8fd61f7256f61d715daef572e76e52/packages/lit-html/src/lit-html.ts#L1260
+  // We need to set the currentNode away from the cloned tree so that we
+  // don't hold onto the tree even if it is detached and should be freed.
+  walker.currentNode = document;
+};
+
 export const html = (
   strs: TemplateStringsArray,
   ...items: (Patch | AnyView)[]
 ): View => {
   // const frag = document.createDocumentFragment();
   let frag: DocumentFragment;
-  const itemCount = strs.length - 1;
   const wraps: Wrap<unknown, CmdContext>[] = [];
 
   const exist = tplCache.get(strs);
   if (exist) {
     frag = document.importNode(exist.el.content, true);
     if (items && items.length > 0) {
-      walker.currentNode = frag;
-
-      let node = walker.nextNode();
-
-      let nodeIndex = 0;
-      let itemIndex = 0;
-      let existIndex = exist.indexes[itemIndex];
-      while (existIndex !== undefined) {
-        if (nodeIndex === existIndex) {
-          if (node === null) throw new Error('empty node');
-          wraps.push({item: at(items, itemIndex), node});
-          itemIndex++;
-          existIndex = exist.indexes[itemIndex];
-          if (node.nodeType === Node.ELEMENT_NODE) _rmMark(node as Element);
-        }
-        node = walker.nextNode();
-        nodeIndex++;
-      }
-
-      // https://github.com/lit/lit/blob/c42ee1e96b8fd61f7256f61d715daef572e76e52/packages/lit-html/src/lit-html.ts#L1260
-      // We need to set the currentNode away from the cloned tree so that we
-      // don't hold onto the tree even if the tree is detached and should be
-      // freed.
-      walker.currentNode = document;
+      _scan(
+        frag,
+        items,
+        wraps,
+        (_node, nodeIndex, itemIndex) => nodeIndex === exist.indexes[itemIndex],
+      );
     }
   } else {
     const template = document.createElement('template');
@@ -105,29 +116,16 @@ export const html = (
     frag = document.importNode(template.content, true);
 
     if (items && items.length > 0) {
-      walker.currentNode = frag;
-      let nodeIndex = 0;
-      let node = walker.nextNode();
-
-      while (node !== null && tpl.indexes.length < itemCount) {
-        if (node.nodeType === Node.ELEMENT_NODE) {
-          if (_hasMark(node as Element)) {
-            tpl.indexes.push(nodeIndex);
-            wraps.push({item: at(items, wraps.length), node});
-            _rmMark(node as Element);
-          }
-        } else if (node.nodeType === Node.COMMENT_NODE) {
-          if (_isView(node as Comment)) {
-            tpl.indexes.push(nodeIndex);
-            wraps.push({item: at(items, wraps.length), node});
-          }
-        }
-        //
-
-        node = walker.nextNode();
-        nodeIndex++;
-      }
-      walker.currentNode = document;
+      _scan(
+        frag,
+        items,
+        wraps,
+        (node) =>
+          node.nodeType === Node.ELEMENT_NODE
+            ? _hasMark(node as Element)
+            : node.nodeType === Node.COMMENT_NODE && _isView(node as Comment),
+        tpl.indexes,
+      );
     }
 
     tplCache.set(strs, tpl);

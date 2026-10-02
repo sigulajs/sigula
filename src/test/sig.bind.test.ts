@@ -1,4 +1,4 @@
-import {describe, expect, it} from 'vitest';
+import {describe, expect, it, vi} from 'vitest';
 import {createBind, removeBind, sig} from '..';
 
 const flush = async () => {
@@ -159,5 +159,28 @@ describe('queue coalescing', () => {
     expect(() => s.forceUpdate(1)).not.toThrow();
     expect(s.getBinds().length).toBe(count);
     expect(runs).toBe(0);
+  });
+
+  it('keeps running the rest of the queue when a bind throws', async () => {
+    const s = sig(0);
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    let ran = 0;
+    createBind(s, {}, () => {
+      throw new Error('boom');
+    });
+    createBind(s, {}, () => {
+      ran++;
+    });
+
+    s.forceUpdate(1);
+    await flush();
+
+    expect(ran).toBe(1);
+    expect(spy).toHaveBeenCalledWith(
+      '[CallbackQueue] task failed:',
+      expect.any(Error),
+      expect.anything(),
+    );
+    spy.mockRestore();
   });
 });

@@ -28,44 +28,47 @@ export const patch = (...toPatchItems: ToAnyPatchItem[]): Patch => ({
   toPatchItems,
 });
 
+// Every patch item is the same shape -- bind `source` to `elem` plus whatever
+// arguments the command needs -- so the whole body lives here once.
+const _toPatchItem =
+  <T>(
+    source: T | Sig<T>,
+    extra: unknown[] | undefined,
+    cmd: Cmd<T, PatchContext>,
+  ): ToPatchItem<T> =>
+  (elem) => ({
+    source,
+    context: extra ? {node: elem, extra} : {node: elem},
+    cmd,
+  });
+
+// most commands take their attribute/style/class name as the first extra
+const _key = (ctx: PatchContext): string => {
+  const key = ctx.extra?.[0];
+  if (!key) throw new Error('patch: empty key');
+  return key as string;
+};
+
 const idCmd = <T>(val: T, ctx: PatchContext) => {
   (ctx.node as Element).id = String(val);
 };
 
-export const id =
-  <T>(source: T | Sig<T>): ToPatchItem<T> =>
-  (elem: Element): PatchItem<T> => ({
-    source,
-    context: {node: elem},
-    cmd: idCmd,
-  });
+export const id = <T>(source: T | Sig<T>): ToPatchItem<T> =>
+  _toPatchItem(source, undefined, idCmd);
 
 const valCmd = <T>(val: T, ctx: PatchContext) => {
   (ctx.node as unknown as {value: string}).value = String(val);
 };
 
-export const val =
-  <T>(source: T | Sig<T>): ToPatchItem<T> =>
-  (elem: Element): PatchItem<T> => ({
-    source,
-    context: {node: elem},
-    cmd: valCmd,
-  });
+export const val = <T>(source: T | Sig<T>): ToPatchItem<T> =>
+  _toPatchItem(source, undefined, valCmd);
 
 const attrCmd = <T>(val: T, ctx: PatchContext) => {
-  const key = ctx.extra ? ctx.extra[0] : null;
-  if (!key) throw new Error('attrCmd: empty key');
-
-  (ctx.node as Element).setAttribute(key as string, String(val));
+  (ctx.node as Element).setAttribute(_key(ctx), String(val));
 };
 
-export const attr =
-  <T>(source: T | Sig<T>, key: string): ToPatchItem<T> =>
-  (elem: Element): PatchItem<T> => ({
-    source,
-    context: {node: elem, extra: [key]},
-    cmd: attrCmd,
-  });
+export const attr = <T>(source: T | Sig<T>, key: string): ToPatchItem<T> =>
+  _toPatchItem(source, [key], attrCmd);
 
 export type WritableStyleKey = {
   [K in keyof CSSStyleDeclaration]: CSSStyleDeclaration[K] extends string
@@ -74,46 +77,31 @@ export type WritableStyleKey = {
 }[keyof CSSStyleDeclaration];
 
 const styleCmd = <T>(val: T, ctx: PatchContext) => {
-  const key = ctx.extra ? ctx.extra[0] : null;
-  if (!key) throw new Error('attrCmd: empty key');
-  (ctx.node as HTMLElement).style[key as WritableStyleKey] = String(val);
+  (ctx.node as HTMLElement).style[_key(ctx) as WritableStyleKey] = String(val);
 };
 
-export const style =
-  <T>(source: T | Sig<T>, key: WritableStyleKey): ToPatchItem<T> =>
-  (elem: Element): PatchItem<T> => ({
-    source,
-    context: {node: elem, extra: [key]},
-    cmd: styleCmd,
-  });
+export const style = <T>(
+  source: T | Sig<T>,
+  key: WritableStyleKey,
+): ToPatchItem<T> => _toPatchItem(source, [key], styleCmd);
 
 const stylePropertyCmd = <T>(val: T, ctx: PatchContext) => {
-  const key = ctx.extra ? ctx.extra[0] : null;
-  if (!key) throw new Error('attrCmd: empty key');
-  (ctx.node as HTMLElement).style.setProperty(key as string, String(val));
+  (ctx.node as HTMLElement).style.setProperty(_key(ctx), String(val));
 };
 
-export const styleProperty =
-  <T>(source: T | Sig<T>, key: string): ToPatchItem<T> =>
-  (elem: Element): PatchItem<T> => ({
-    source,
-    context: {node: elem, extra: [key]},
-    cmd: stylePropertyCmd,
-  });
+export const styleProperty = <T>(
+  source: T | Sig<T>,
+  key: string,
+): ToPatchItem<T> => _toPatchItem(source, [key], stylePropertyCmd);
 
 const toggleClassCmd = <T>(val: T, ctx: PatchContext) => {
-  const token = ctx.extra ? ctx.extra[0] : null;
-  if (!token) throw new Error('attrCmd: empty key');
-  (ctx.node as Element).classList.toggle(token as string, Boolean(val));
+  (ctx.node as Element).classList.toggle(_key(ctx), Boolean(val));
 };
 
-export const toggleClass =
-  <T>(source: T | Sig<T>, token: string): ToPatchItem<T> =>
-  (elem: Element): PatchItem<T> => ({
-    source,
-    context: {node: elem, extra: [token]},
-    cmd: toggleClassCmd,
-  });
+export const toggleClass = <T>(
+  source: T | Sig<T>,
+  token: string,
+): ToPatchItem<T> => _toPatchItem(source, [token], toggleClassCmd);
 
 const toggleClassesCmd = <T>(val: T, ctx: PatchContext) => {
   ctx.extra?.forEach((token) => {
@@ -121,29 +109,21 @@ const toggleClassesCmd = <T>(val: T, ctx: PatchContext) => {
   });
 };
 
-export const toggleClasses =
-  <T>(source: T | Sig<T>, ...tokens: string[]): ToPatchItem<T> =>
-  (elem: Element): PatchItem<T> => ({
-    source,
-    context: {node: elem, extra: tokens},
-    cmd: toggleClassesCmd,
-  });
+export const toggleClasses = <T>(
+  source: T | Sig<T>,
+  ...tokens: string[]
+): ToPatchItem<T> => _toPatchItem(source, tokens, toggleClassesCmd);
 
 export type ActFn<T> = (node: Node, val?: T) => void;
 
 const actCmd = <T>(val: T, ctx: PatchContext) => {
-  const fn = ctx.extra ? ctx.extra[0] : null;
+  const fn = ctx.extra?.[0] as ActFn<T> | undefined;
   if (!fn) throw new Error('actCmd error: no function');
-  (fn as ActFn<T>)(ctx.node, val);
+  fn(ctx.node, val);
 };
 
-export const act =
-  <T>(source: T | Sig<T>, fn: ActFn<T>): ToPatchItem<T> =>
-  (node: Node): PatchItem<T> => ({
-    source,
-    context: {node, extra: [fn]},
-    cmd: actCmd,
-  });
+export const act = <T>(source: T | Sig<T>, fn: ActFn<T>): ToPatchItem<T> =>
+  _toPatchItem(source, [fn], actCmd);
 
 type _Listener<K extends keyof HTMLElementEventMap> = (
   this: HTMLElement,
@@ -164,14 +144,8 @@ const onCmd = (listener: unknown, ctx: PatchContext) => {
   );
 };
 
-export const on =
-  <K extends keyof HTMLElementEventMap>(
-    type: K,
-    listener: _Listener<K>,
-    options?: boolean | AddEventListenerOptions,
-  ): ToPatchItem<_Listener<K>> =>
-  (node: Node): PatchItem<_Listener<K>> => ({
-    source: listener,
-    context: {node, extra: [type, options]},
-    cmd: onCmd,
-  });
+export const on = <K extends keyof HTMLElementEventMap>(
+  type: K,
+  listener: _Listener<K>,
+  options?: boolean | AddEventListenerOptions,
+): ToPatchItem<_Listener<K>> => _toPatchItem(listener, [type, options], onCmd);
