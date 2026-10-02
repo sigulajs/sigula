@@ -14,6 +14,7 @@ export interface PatchItem<T> {
 }
 export type ToPatchItem<T> = (el: Element) => PatchItem<T>;
 
+// biome-ignore lint/suspicious/noExplicitAny: any patch item
 export type AnyPatchItem = PatchItem<any>;
 export type ToAnyPatchItem = (el: Element) => AnyPatchItem;
 
@@ -89,7 +90,7 @@ export const style =
 const stylePropertyCmd = <T>(val: T, ctx: PatchContext) => {
   const key = ctx.extra ? ctx.extra[0] : null;
   if (!key) throw new Error('attrCmd: empty key');
-  (ctx.elem as HTMLElement).style.setProperty(key as string, String(val));
+  (ctx.node as HTMLElement).style.setProperty(key as string, String(val));
 };
 
 export const styleProperty =

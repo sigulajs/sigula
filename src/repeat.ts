@@ -192,7 +192,7 @@ const repeatCmd = <T>(items: T[], ctx: RepeatContext<T>) => {
         oldTail--;
       } else {
         const oldIndex = oldKeyToIndexMap.get(newKeys[newHead]);
-        const oldTrack = oldIndex ? ctx.tracks[oldIndex] : null;
+        const oldTrack = oldIndex !== undefined ? ctx.tracks[oldIndex] : null;
         if (oldTrack) {
           // console.log(
           //   'move old item to new head:',

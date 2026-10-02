@@ -136,7 +136,7 @@ export class Sig<T> implements Equatable {
 
   removeBind(bind: Bind<T, CmdContext>) {
     const index = this._binds.indexOf(bind);
-    this._binds.splice(index, 1);
+    if (index >= 0) this._binds.splice(index, 1);
     if (this._binds.length === 0) {
       this.cleanup();
     }
