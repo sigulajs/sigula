@@ -6,6 +6,7 @@ export interface Bind<T, C extends CmdContext> {
   context: C;
   cmd: Cmd<T, C>;
   removed: boolean;
+  queued?: boolean;
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: any bind
@@ -45,11 +46,13 @@ class Queue {
     return this.scheduled;
   }
 
-  add(...binds: AnyBind[]): this {
+  addAll(binds: readonly AnyBind[]): this {
     for (const bind of binds) {
+      if (bind.queued) continue;
+      bind.queued = true;
       this._binds.push(bind);
     }
-    if (binds.length > 0) this.kick();
+    if (this.size > 0) this.kick();
     return this;
   }
 
@@ -79,6 +82,11 @@ class Queue {
             if (!removed) cmd(sig.get(), context);
           } catch (err) {
             this.onError(err, bind);
+          } finally {
+            // re-arm after running: cmd reads sig.get() at call time, so a bind
+            // that runs after a write already sees the newest value and must
+            // not re-run, while one that ran before it has to be queued again
+            bind.queued = false;
           }
         }
       }
@@ -118,7 +126,7 @@ export class Sig<T> implements Equatable {
 
   forceUpdate(v: T) {
     this._val = v;
-    QUEUE.add(...this._binds);
+    QUEUE.addAll(this._binds);
   }
 
   update(v: T) {
@@ -179,7 +187,7 @@ export const createBind = <T, C extends CmdContext>(
   context: C,
   cmd: Cmd<T, C>,
 ): Bind<T, C> => {
-  const bind: Bind<T, C> = {sig, context, cmd, removed: false};
+  const bind: Bind<T, C> = {sig, context, cmd, removed: false, queued: false};
   sig.addBind(bind);
   return bind;
 };

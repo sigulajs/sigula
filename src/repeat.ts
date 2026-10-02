@@ -77,6 +77,22 @@ const repeatCmd = <T>(items: T[], ctx: RepeatContext<T>) => {
   const end = ctx.boundary.end;
   const parent = start.parentNode;
   if (!parent) throw new Error('no parent node');
+
+  const compare = ctx.prop.compare ?? isEqual;
+  const newKeys = items.map((item) => ctx.prop.key(item));
+  const tracks = ctx.tracks;
+
+  // Nothing changed: same keys, same order, equal items. Bail out before
+  // touching the DOM so a redundant re-render costs zero DOM mutations
+  // instead of a fence insert/remove pair.
+  if (tracks.length === items.length) {
+    const unchanged = tracks.every((track, i) => {
+      const item = items[i] as T;
+      return track.key === newKeys[i] && compare(track.item, item);
+    });
+    if (unchanged) return;
+  }
+
   const startFence = document.createComment('repeat-start-fence');
   const endFence = document.createComment('repeat-end-fence');
 
@@ -89,8 +105,7 @@ const repeatCmd = <T>(items: T[], ctx: RepeatContext<T>) => {
     endFence,
   };
 
-  const newKeys = items.map((item) => ctx.prop.key(item));
-  const oldKeys = ctx.tracks.map((track) => track.key);
+  const oldKeys = tracks.map((track) => track.key);
 
   let newKeyToIndexMap: Map<unknown, number> | undefined;
   let oldKeyToIndexMap: Map<unknown, number> | undefined;
@@ -117,6 +132,7 @@ const repeatCmd = <T>(items: T[], ctx: RepeatContext<T>) => {
         at(ctx.tracks, oldHead),
         at(items, newHead),
         ctx.prop,
+        compare,
       );
       oldHead++;
       newHead++;
@@ -128,6 +144,7 @@ const repeatCmd = <T>(items: T[], ctx: RepeatContext<T>) => {
         at(ctx.tracks, oldTail),
         at(items, newTail),
         ctx.prop,
+        compare,
       );
       oldTail--;
       newTail--;
@@ -142,6 +159,7 @@ const repeatCmd = <T>(items: T[], ctx: RepeatContext<T>) => {
         at(ctx.tracks, oldHead),
         at(items, newTail),
         ctx.prop,
+        compare,
       );
       //
       // const before = ref ? boundaryStart(ref.boundary) : fence;
@@ -165,6 +183,7 @@ const repeatCmd = <T>(items: T[], ctx: RepeatContext<T>) => {
         at(ctx.tracks, oldTail),
         at(items, newHead),
         ctx.prop,
+        compare,
       );
       // if (!before.nextSibling) throw new Error('no before.nextSibling');
       // _moveTrackAfter(before, newTracks[newHead], newTracks[newHead - 1]);
@@ -203,6 +222,7 @@ const repeatCmd = <T>(items: T[], ctx: RepeatContext<T>) => {
             oldTrack,
             at(items, newHead),
             ctx.prop,
+            compare,
           );
           // _moveTrackAfter(before, newTracks[newHead], newTracks[newHead - 1]);
           _moveTrack(
@@ -316,8 +336,8 @@ const _setTrack = <T>(
   old: Track<T>,
   item: T,
   prop: RepeatProp<T>,
+  compare: (a: T, b: T) => boolean,
 ): Track<T> => {
-  const compare = prop.compare ?? isEqual;
   if (compare(old.item, item)) {
     return {
       ...old,

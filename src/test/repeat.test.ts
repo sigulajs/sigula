@@ -361,4 +361,146 @@ describe('repeat', () => {
       expect(document.body.innerHTML).not.toContain('repeat-end-fence');
     });
   });
+
+  describe('redundant updates', () => {
+    interface Item {
+      id: number;
+      label: string;
+    }
+
+    const items: Item[] = [
+      {id: 1, label: 'a'},
+      {id: 2, label: 'b'},
+      {id: 3, label: 'c'},
+      {id: 4, label: 'd'},
+    ];
+
+    // counts structural DOM writes so we can assert an unchanged re-render
+    // never touches the DOM at all
+    type MutMethod = 'insertBefore' | 'removeChild' | 'replaceChild';
+
+    const trackMutations = (node: Node) => {
+      const counts: Record<MutMethod, number> = {
+        insertBefore: 0,
+        removeChild: 0,
+        replaceChild: 0,
+      };
+      const target = node as unknown as Record<string, unknown>;
+      const originals = new Map<MutMethod, unknown>();
+      for (const method of [
+        'insertBefore',
+        'removeChild',
+        'replaceChild',
+      ] as MutMethod[]) {
+        const original = target[method] as (...args: unknown[]) => unknown;
+        originals.set(method, original);
+        target[method] = (...args: unknown[]) => {
+          counts[method]++;
+          return original.apply(node, args);
+        };
+      }
+      return {
+        counts,
+        restore: () => {
+          for (const [method, original] of originals) {
+            target[method] = original;
+          }
+        },
+      };
+    };
+
+    const mount = () => {
+      const todos = sig<Item[]>(items.map((i) => ({...i})));
+      render(
+        html`<div><ul>${repeat(todos, {
+          key: (item) => item.id.toString(),
+          view: (item) => html`<li>${text(item.label)}</li>`,
+        })}</ul></div>`,
+        document.body,
+      );
+      return todos;
+    };
+
+    it('performs no DOM mutations when the re-render is unchanged', async () => {
+      const todos = mount();
+      const list = document.querySelector('ul') as HTMLElement;
+      const spy = trackMutations(list);
+
+      todos.forceUpdate(items.map((i) => ({...i})));
+      await Promise.resolve();
+      await Promise.resolve();
+
+      spy.restore();
+      expect(spy.counts).toEqual({
+        insertBefore: 0,
+        removeChild: 0,
+        replaceChild: 0,
+      });
+      expect(document.body.innerHTML).toBe(
+        '<div><ul><li>a</li><li>b</li><li>c</li><li>d</li></ul></div>',
+      );
+    });
+
+    it('performs no DOM mutations when re-rendering an equal array twice', async () => {
+      const todos = mount();
+
+      todos.forceUpdate(items.map((i) => ({...i})));
+      await Promise.resolve();
+      await Promise.resolve();
+
+      const list = document.querySelector('ul') as HTMLElement;
+      const spy = trackMutations(list);
+      todos.forceUpdate(items.map((i) => ({...i})));
+      await Promise.resolve();
+      await Promise.resolve();
+      spy.restore();
+
+      expect(spy.counts).toEqual({
+        insertBefore: 0,
+        removeChild: 0,
+        replaceChild: 0,
+      });
+    });
+
+    it('still updates a track that was reused as-is by an earlier reorder', async () => {
+      // a rotation that cannot be resolved from the head/tail, so the keyed
+      // map path runs and reuses tracks that were already placed
+      const rotated: Item[] = [
+        {...(items[1] as Item)},
+        {...(items[3] as Item)},
+        {...(items[0] as Item)},
+        {...(items[2] as Item)},
+      ];
+      const signal = sig<Item[]>(items.map((i) => ({...i})));
+      render(
+        html`<div><ul>${repeat(signal, {
+          key: (item) => item.id.toString(),
+          view: (item) => html`<li>${text(item.label)}</li>`,
+        })}</ul></div>`,
+        document.body,
+      );
+
+      signal.forceUpdate(rotated);
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(document.querySelector('ul')?.innerHTML).toBe(
+        '<li>b</li><li>d</li><li>a</li><li>c</li>',
+      );
+
+      // a track reused above must not be treated as already-handled and
+      // skipped when its item changes later
+      signal.forceUpdate([
+        {...(items[1] as Item)},
+        {...(items[3] as Item)},
+        {...(items[0] as Item)},
+        {id: 3, label: 'C-CHANGED'},
+      ]);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(document.querySelector('ul')?.innerHTML).toBe(
+        '<li>b</li><li>d</li><li>a</li><li>C-CHANGED</li>',
+      );
+    });
+  });
 });
