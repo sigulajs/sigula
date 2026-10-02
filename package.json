@@ -55,5 +55,9 @@
       "default": "./dist/sigula.js"
     },
     "./package.json": "./package.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sigulajs/sigula.git"
   }
 }
