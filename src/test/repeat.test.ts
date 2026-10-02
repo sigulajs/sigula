@@ -37,26 +37,37 @@ describe('repeat', () => {
       document.body,
     );
 
-    expect(document.body.innerHTML).toBe(nums.get().join(',') + ',');
+    expect(document.body.innerHTML).toBe(
+      nums
+        .get()
+        .map((v) => `${v},`)
+        .join(''),
+    );
 
     for (let i = 0; i < 10; i++) {
       const newNums0 = randomIntArray(150, 1, 1000);
       nums.forceUpdate(newNums0);
       await Promise.resolve();
       // await new Promise((resolve) => setTimeout(resolve, 100));
-      expect(document.body.innerHTML).toBe(newNums0.join(',') + ',');
+      expect(document.body.innerHTML).toBe(
+        newNums0.map((v) => `${v},`).join(''),
+      );
 
       const newNums1 = randomIntArray(300, 1, 1000);
       nums.forceUpdate(newNums1);
       await Promise.resolve();
       // await new Promise((resolve) => setTimeout(resolve, 100));
-      expect(document.body.innerHTML).toBe(newNums1.join(',') + ',');
+      expect(document.body.innerHTML).toBe(
+        newNums1.map((v) => `${v},`).join(''),
+      );
 
       const newNums2 = randomIntArray(200, 1, 1000);
       nums.forceUpdate(newNums2);
       await Promise.resolve();
       // await new Promise((resolve) => setTimeout(resolve, 100));
-      expect(document.body.innerHTML).toBe(newNums2.join(',') + ',');
+      expect(document.body.innerHTML).toBe(
+        newNums2.map((v) => `${v},`).join(''),
+      );
     }
   });
 

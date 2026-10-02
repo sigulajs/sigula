@@ -1,10 +1,10 @@
 import {beforeEach, describe, expect, it} from 'vitest';
-import {repleaceWithNode, toBoundary} from '../boundary';
+import {replaceWithNode, toBoundary} from '../boundary';
 
 const text = (s: string) => document.createTextNode(s);
 const el = (tag: string) => document.createElement(tag);
 
-describe('repleaceWithNode', () => {
+describe('replaceWithNode', () => {
   let host: HTMLElement;
 
   beforeEach(() => {
@@ -17,7 +17,7 @@ describe('repleaceWithNode', () => {
     host.append(text('before'), text('target'), el('b'), el('i'));
 
     const target = host.childNodes[1] as Text;
-    repleaceWithNode(toBoundary(target), text('NEW'));
+    replaceWithNode(toBoundary(target), text('NEW'));
 
     expect(host.innerHTML).toBe('beforeNEW<b></b><i></i>');
   });
@@ -29,7 +29,7 @@ describe('repleaceWithNode', () => {
     const end = host.childNodes[2] as Text;
     const frag = document.createDocumentFragment();
     frag.append(text('X'), text('Y'));
-    repleaceWithNode({start, end}, frag);
+    replaceWithNode({start, end}, frag);
 
     expect(host.innerHTML).toBe('beforeXY<i></i>');
   });
@@ -37,7 +37,7 @@ describe('repleaceWithNode', () => {
   it('keeps following siblings when the single-node boundary is the last child', () => {
     host.append(el('b'), text('target'));
 
-    repleaceWithNode(toBoundary(host.childNodes[1] as Text), text('NEW'));
+    replaceWithNode(toBoundary(host.childNodes[1] as Text), text('NEW'));
 
     expect(host.innerHTML).toBe('<b></b>NEW');
   });
@@ -47,7 +47,7 @@ describe('repleaceWithNode', () => {
 
     const frag = document.createDocumentFragment();
     frag.append(text('X'), text('Y'));
-    const boundary = repleaceWithNode(
+    const boundary = replaceWithNode(
       toBoundary(host.childNodes[0] as Text),
       frag,
     );
@@ -59,7 +59,7 @@ describe('repleaceWithNode', () => {
 
   it('throws when the old boundary has no parent', () => {
     const orphan = text('orphan');
-    expect(() => repleaceWithNode(toBoundary(orphan), text('X'))).toThrow(
+    expect(() => replaceWithNode(toBoundary(orphan), text('X'))).toThrow(
       'replaceWithNode: old boundary has no parentNode',
     );
   });

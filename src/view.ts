@@ -1,4 +1,4 @@
-import {type Boundary, repleaceWithNode, toBoundary} from './boundary';
+import {type Boundary, replaceWithNode, toBoundary} from './boundary';
 import type {CmdContext} from './cmd';
 import {type Commit, cleanCommit} from './commit';
 import {
@@ -11,7 +11,6 @@ import {
 
 export interface View<T = unknown, C extends CmdContext = CmdContext> {
   type: 'view';
-  // frag: DocumentFragment;
   node: Node;
   bind?: Bind<T, C> | undefined;
   childCommits?: Commit<unknown, CmdContext>[];
@@ -21,7 +20,6 @@ export interface View<T = unknown, C extends CmdContext = CmdContext> {
 export type AnyView = View<any, any>;
 
 export interface ViewContext<T> extends CmdContext {
-  // kind: 'view';
   boundary: Boundary;
   bind?: AnyBind | undefined;
   childCommits?: Commit<unknown, CmdContext>[] | undefined;
@@ -66,5 +64,5 @@ export const view = <T>(
 export const extractBoundary = (view: View): Boundary => toBoundary(view.node);
 
 export const replaceWithView = (old: Boundary, view: View): Boundary => {
-  return repleaceWithNode(old, view.node);
+  return replaceWithNode(old, view.node);
 };

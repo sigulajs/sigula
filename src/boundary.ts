@@ -38,7 +38,7 @@ export const toBoundary = (node: Node): Boundary => {
   return b as Boundary;
 };
 
-export const repleaceWithNode = (old: Boundary, node: Node) => {
+export const replaceWithNode = (old: Boundary, node: Node) => {
   const newBoundary = toBoundary(node);
   const parent = old.start.parentNode;
   if (!parent)

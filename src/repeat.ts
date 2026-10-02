@@ -1,7 +1,7 @@
 import {
   type Boundary,
   removeBoundary,
-  repleaceWithNode,
+  replaceWithNode,
   toBoundary,
 } from './boundary';
 import type {CmdContext} from './cmd';
@@ -57,7 +57,7 @@ const repeatCmd = <T>(items: T[], ctx: RepeatContext<T>) => {
   if (!Array.isArray(items) || items.length === 0) {
     const newFrag = document.createDocumentFragment();
     newFrag.appendChild(document.createComment('empty-list'));
-    const newBoundary = repleaceWithNode(ctx.boundary, newFrag);
+    const newBoundary = replaceWithNode(ctx.boundary, newFrag);
     ctx.boundary = newBoundary;
     ctx.tracks.forEach(_cleanTrack);
     ctx.tracks = [];
@@ -66,7 +66,7 @@ const repeatCmd = <T>(items: T[], ctx: RepeatContext<T>) => {
   const newTracks: Track<T>[] = [];
   if (!Array.isArray(ctx.tracks) || ctx.tracks.length === 0) {
     const newFrag = _init(items, ctx.prop, newTracks);
-    const newBoundary = repleaceWithNode(ctx.boundary, newFrag);
+    const newBoundary = replaceWithNode(ctx.boundary, newFrag);
     ctx.boundary = newBoundary;
     // ctx.tracks.forEach(_cleanTrack);
     ctx.tracks = newTracks;
