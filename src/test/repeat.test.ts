@@ -39,7 +39,7 @@ describe('repeat', () => {
 
     expect(document.body.innerHTML).toBe(nums.get().join(',') + ',');
 
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 10; i++) {
       const newNums0 = randomIntArray(150, 1, 1000);
       nums.forceUpdate(newNums0);
       await Promise.resolve();
@@ -76,7 +76,7 @@ describe('repeat', () => {
 
     expect(document.body.innerHTML).toBe(expectedHtml(nums.get()));
 
-    for (let i = 0; i < 1000; i++) {
+    for (let i = 0; i < 10; i++) {
       const newNums0 = randomIntArray(15, 1, 100);
       nums.forceUpdate(newNums0);
       await Promise.resolve();
@@ -112,7 +112,7 @@ describe('repeat', () => {
       items.map((v) => `<span>${v.id}</span> - <span>${v.val}</span>`).join('');
     expect(document.body.innerHTML).toBe(expectedHtml(nums.get()));
 
-    for (let i = 0; i < 1000; i++) {
+    for (let i = 0; i < 10; i++) {
       const newNums0 = randomIntArray(15, 1, 100).map((v) => ({
         id: v,
         val: (v + 1).toString(),

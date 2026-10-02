@@ -50,16 +50,18 @@ describe('view', () => {
       '<div><span>1</span><span>2</span></div>',
     );
 
-    const [b0, b1] = source.getBinds();
-    expect(b0.removed).toBe(false);
-    expect(b1.removed).toBe(false);
+    const bs = source.getBinds();
+    const b0 = bs[0];
+    const b1 = bs[1];
+    expect(b0?.removed).toBe(false);
+    expect(b1?.removed).toBe(false);
 
     source.update([]);
     await Promise.resolve();
     expect(document.body.innerHTML).toBe('<div>Empty</div>');
     expect(source.getBinds().length).toBe(1);
     expect(isEmpty.getBinds().length).toBe(1);
-    expect(b0.removed).toBe(false);
-    expect(b1.removed).toBe(true);
+    expect(b0?.removed).toBe(false);
+    expect(b1?.removed).toBe(true);
   });
 });
