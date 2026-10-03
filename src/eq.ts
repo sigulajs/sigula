@@ -10,9 +10,6 @@ const isEquatable = (value: unknown): value is Equatable =>
 
 export type UnknownRecord = Record<string, unknown>;
 
-const isRecord = (v: unknown): v is UnknownRecord =>
-  typeof v === 'object' && v !== null;
-
 export const isEqual = <T>(a: T, b: T): boolean => {
   if (a === b) return true;
   if (typeof a !== typeof b) return false;
@@ -58,16 +55,24 @@ export const isEqual = <T>(a: T, b: T): boolean => {
   }
 
   // Object & Record
-  if (Object.is(a, b)) return true;
-  if (!isRecord(a) || !isRecord(b)) return false;
+  // Reject different prototypes before falling back to a key comparison.
+  // Object.keys is [] for Date, Map, Set, RegExp, Error and [], so without
+  // this guard isEqual([], {}) and isEqual(new Date(0), {}) both report
+  // equal and Sig.update silently swallows a shape-changing write.
+  if (Object.getPrototypeOf(a) !== Object.getPrototypeOf(b)) return false;
 
-  const aKeys = Object.keys(a);
-  const bKeys = Object.keys(b);
+  // both are objects sharing one prototype from here on
+  const ao = a as UnknownRecord;
+  const bo = b as UnknownRecord;
+
+  const aKeys = Object.keys(ao);
+  const bKeys = Object.keys(bo);
   if (aKeys.length !== bKeys.length) return false;
 
-  for (const key of aKeys) {
-    if (!Object.hasOwn(b, key)) return false;
-    if (!isEqual(a[key], b[key])) return false;
+  for (let i = 0; i < aKeys.length; i++) {
+    const key = aKeys[i] as string;
+    if (!Object.hasOwn(bo, key)) return false;
+    if (!isEqual(ao[key], bo[key])) return false;
   }
 
   return true;
