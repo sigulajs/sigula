@@ -136,12 +136,10 @@ export const html = (
       'html: unmatched interpolation; patch() must be in attribute position',
     );
 
-  const commits: Commit<unknown, CmdContext>[] = [];
+  const commits: Commit<unknown>[] = [];
   wraps.forEach(({item, node}) => {
     if (item.type === 'patch') {
-      commits.push(
-        commitPatch(item, node) as unknown as Commit<unknown, CmdContext>,
-      );
+      commits.push(commitPatch(item, node));
     } else if (item.type === 'view') {
       commits.push(commitView(item, node));
     }

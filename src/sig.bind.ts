@@ -76,7 +76,7 @@ const QUEUE = new Queue();
 
 export class Sig<T> implements Equatable {
   private _val: T;
-  private _binds: Bind<T, CmdContext>[] = [];
+  private _binds: AnyBind[] = [];
 
   constructor(val: T) {
     this._val = val;
@@ -106,7 +106,7 @@ export class Sig<T> implements Equatable {
   }
 
   addBind<C extends CmdContext>(bind: Bind<T, C>) {
-    this._binds.push(bind as unknown as Bind<T, CmdContext>);
+    this._binds.push(bind);
   }
 
   removeBind(bind: Bind<T, CmdContext>) {
@@ -127,10 +127,10 @@ export class Sig<T> implements Equatable {
 }
 
 export class DerivedSig<T> extends Sig<T> {
-  private _fromBinds: Bind<unknown, CmdContext>[] = [];
+  private _fromBinds: AnyBind[] = [];
 
   addFromBind<S, C extends CmdContext>(bind: Bind<S, C>) {
-    this._fromBinds.push(bind as unknown as Bind<unknown, CmdContext>);
+    this._fromBinds.push(bind);
   }
 
   override cleanup() {

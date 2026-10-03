@@ -9,7 +9,8 @@ import {
   type Sig,
 } from './sig.bind';
 
-export interface View<T = unknown, C extends CmdContext = CmdContext> {
+// biome-ignore lint/suspicious/noExplicitAny: View with any context
+export interface View<T = unknown, C extends CmdContext = any> {
   type: 'view';
   node: Node;
   bind?: Bind<T, C> | undefined;
