@@ -784,6 +784,16 @@ Expected: PASS, `Tests 16 passed (16)` (13 existing + 3 new). Verified against t
 
 `src/test/repeat.test.ts` already imports `sig`, `html`, `render`, `repeat`, `text` and `view` from `'..'`, and `Sig.getBinds()` is public API, so no import changes are needed.
 
+**Correction after review — the count grew and the framing needs adjusting.** Mutation testing showed these guards kill **no mutant the pre-existing suite does not already kill**, including the in-place `_setTrack` mutation this task was written for. Two consequences worth recording rather than re-discovering:
+
+- The suite *does* catch the rejected optimization, but via `still updates a track that was reused as-is by an earlier reorder` plus the two `Math.random()` fuzz tests — not via the new guards. The fuzz tests needed up to 6 runs to fail reliably, which is the argument for keeping the deterministic versions.
+- The `cleaned` flag (`src/repeat.ts:53` and the `!track.cleaned` guard at `:263`) has **zero** coverage anywhere in the suite: deleting that guard, or never setting `cleaned = true`, fails no test. It cannot be pinned through `getBinds()`, because `removeBind` is idempotent (`indexOf` returns `-1`, so the splice no-ops) and `removeBoundary` early-returns on a detached start — a double clean is therefore silent. Closing that needs a test-visible teardown counter, which is out of scope here.
+- `view` is also unpinned: dropping it from `_setTrack`'s equal path fails no test. `boundary`, `key`, `item` and `childCommits` are all covered.
+
+A third test was renamed from `cleans each surviving track exactly once when items are removed` to `keeps the surviving head and tail when the middle rows are removed`, because its original name promised a guard it structurally cannot contain (see the `cleaned` note above) and its scenario never enters the keyed-map branch at all.
+
+The supplied test code also failed `pnpm typecheck` as written: `labels.get(item.id)` returns `Sig<string> | undefined`, `text` is an invariant generic, so `as Sig<string>` is required at those call sites. The pre-reorder bind-count assertion discharges the invariant at runtime.
+
 - [ ] **Step 3: Commit the tests alone**
 
 ```bash
