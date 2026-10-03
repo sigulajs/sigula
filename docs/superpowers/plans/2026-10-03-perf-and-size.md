@@ -601,7 +601,7 @@ Verified: the only compile-clean form is the existing one. Skip this step.
 - [ ] **Step 4: Run the eq suite**
 
 Run: `npx vitest run src/test/eq.test.ts`
-Expected: PASS. All 14 previously-failing tests now pass, and every pinned test still passes.
+Expected: PASS, `Tests 28 passed (28)`. All 13 previously-failing tests now pass, and every pinned test still passes. Verified during plan validation that the guard placed after `isEquatable` turns the suite fully green.
 
 - [ ] **Step 5: Run the full suite and typecheck**
 
