@@ -2,7 +2,6 @@ import {removeBoundary} from './boundary';
 import type {CmdContext} from './cmd';
 import type {Commit} from './commit';
 import {cleanCommit} from './commit';
-import {liveBoundary} from './live';
 import type {AnyView} from './view';
 
 export const render = (
@@ -20,7 +19,7 @@ export const render = (
     // Read the boundary at dispose time, never at mount. view() and repeat()
     // swap ctx.boundary on every update, so the nodes still in the host are
     // the current ones, not the ones render originally appended.
-    const boundary = liveBoundary(view);
+    const boundary = view.live?.();
     if (boundary) removeBoundary(boundary);
   };
 };

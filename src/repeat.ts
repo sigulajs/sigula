@@ -7,7 +7,6 @@ import {
 import type {CmdContext} from './cmd';
 import {type Commit, cleanCommit} from './commit';
 import {isEqual} from './eq';
-import {LIVE} from './live';
 import {type AnyBind, createBind, removeBind, type Sig} from './sig.bind';
 import {at} from './utils';
 import {
@@ -403,6 +402,6 @@ export const repeat = <T>(
     type: 'view',
     node: frag,
     bind,
-    [LIVE]: () => ctx.boundary,
+    live: () => ctx.boundary,
   };
 };

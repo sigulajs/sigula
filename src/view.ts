@@ -1,7 +1,6 @@
 import {type Boundary, replaceWithNode, toBoundary} from './boundary';
 import type {CmdContext} from './cmd';
 import {type Commit, cleanCommit} from './commit';
-import {LIVE, type LiveBoundary} from './live';
 import {
   type AnyBind,
   type Bind,
@@ -16,7 +15,7 @@ export interface View<T = unknown, C extends CmdContext = any> {
   node: Node;
   bind?: Bind<T, C> | undefined;
   childCommits?: Commit<unknown, CmdContext>[];
-  [LIVE]?: LiveBoundary;
+  live?: () => Boundary | undefined;
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: any view
@@ -61,7 +60,7 @@ export const view = <T>(
   return {
     ...view,
     bind,
-    [LIVE]: () => ctx.boundary,
+    live: () => ctx.boundary,
   };
 };
 
