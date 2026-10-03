@@ -513,5 +513,92 @@ describe('repeat', () => {
         '<li>b</li><li>d</li><li>a</li><li>C-CHANGED</li>',
       );
     });
+
+    it('leaves every row bound after a reorder reuses tracks as-is', async () => {
+      // the per-row signals are stable across reorders, so a reused track
+      // must neither lose nor double its own bind
+      const labels = new Map(items.map((i) => [i.id, sig(i.label)]));
+      const signal = sig<Item[]>(items.map((i) => ({...i})));
+      render(
+        html`<div><ul>${repeat(signal, {
+          key: (item) => item.id.toString(),
+          view: (item) => html`<li>${text(labels.get(item.id) as Sig<string>)}</li>`,
+        })}</ul></div>`,
+        document.body,
+      );
+      for (const l of labels.values()) {
+        expect(l.getBinds().length).toBe(1);
+      }
+
+      // a rotation that cannot be resolved from the head/tail, forcing the
+      // keyed-map path that reuses tracks as-is
+      signal.forceUpdate([
+        {...(items[1] as Item)},
+        {...(items[3] as Item)},
+        {...(items[0] as Item)},
+        {...(items[2] as Item)},
+      ]);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(document.querySelector('ul')?.innerHTML).toBe(
+        '<li>b</li><li>d</li><li>a</li><li>c</li>',
+      );
+      for (const l of labels.values()) {
+        expect(l.getBinds().length).toBe(1);
+      }
+    });
+
+    it('tears down every row when the list is emptied', async () => {
+      const labels = new Map(items.map((i) => [i.id, sig(i.label)]));
+      const signal = sig<Item[]>(items.map((i) => ({...i})));
+      render(
+        html`<div><ul>${repeat(signal, {
+          key: (item) => item.id.toString(),
+          view: (item) => html`<li>${text(labels.get(item.id) as Sig<string>)}</li>`,
+        })}</ul></div>`,
+        document.body,
+      );
+      expect(document.querySelectorAll('li').length).toBe(4);
+      for (const l of labels.values()) {
+        expect(l.getBinds().length).toBe(1);
+      }
+
+      signal.forceUpdate([]);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(document.querySelectorAll('li').length).toBe(0);
+      // every row signal lost its bind exactly once
+      for (const l of labels.values()) {
+        expect(l.getBinds().length).toBe(0);
+      }
+    });
+
+    it('cleans each surviving track exactly once when items are removed', async () => {
+      const signal = sig<Item[]>(items.map((i) => ({...i})));
+      render(
+        html`<div><ul>${repeat(signal, {
+          key: (item) => item.id.toString(),
+          view: (item) => html`<li>${text(item.label)}</li>`,
+        })}</ul></div>`,
+        document.body,
+      );
+
+      // drop the middle two, keeping a head and a tail survivor
+      signal.forceUpdate([
+        {...(items[0] as Item)},
+        {...(items[3] as Item)},
+      ]);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(document.querySelector('ul')?.innerHTML).toBe(
+        '<li>a</li><li>d</li>',
+      );
+      // no internal fences leaked into the output
+      expect(document.body.innerHTML).not.toContain('repeat-start-fence');
+      expect(document.body.innerHTML).not.toContain('repeat-end-fence');
+    });
   });
 });
