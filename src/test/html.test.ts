@@ -1,5 +1,5 @@
 import {beforeEach, describe, expect, it} from 'vitest';
-import {html, patch, render, sig, text, toggleClass, view} from '..';
+import {attr, html, patch, render, sig, text, toggleClass, view} from '..';
 
 describe('html', () => {
   const capture = (s: TemplateStringsArray, ..._: unknown[]) => s;
@@ -67,5 +67,53 @@ describe('html', () => {
         document.body,
       ),
     ).toThrowError(/expected 2 interpolations, got 3/);
+  });
+
+  it('renders a template with more than 31 interpolations', () => {
+    const host = document.createElement('div');
+    const slots = 40;
+    const sigs = Array.from({length: slots}, (_, i) => sig(i));
+    const strs = Array.from({length: slots + 1}, (_, i) =>
+      i === 0 ? '<ul>' : i === slots ? '<li></li></ul>' : '<li></li>',
+    ) as unknown as TemplateStringsArray;
+
+    render(html(strs, ...sigs.map((s) => text(s))), host);
+
+    expect(host.querySelectorAll('li').length).toBe(slots);
+    expect(host.textContent).toBe(
+      Array.from({length: slots}, (_, i) => String(i)).join(''),
+    );
+  });
+
+  it('renders a template with more than 31 patch slots', () => {
+    const host = document.createElement('div');
+    const slots = 40;
+    const sigs = Array.from({length: slots}, (_, i) => sig(`v${i}`));
+    const strs = Array.from({length: slots + 1}, (_, i) =>
+      i === 0 ? '<ul><li ' : i === slots ? '></li></ul>' : '></li><li ',
+    ) as unknown as TemplateStringsArray;
+
+    render(html(strs, ...sigs.map((s) => patch(attr(s, 'data-v')))), host);
+
+    const li = host.querySelectorAll('li');
+    expect(li.length).toBe(slots);
+    expect(li[0]?.getAttribute('data-v')).toBe('v0');
+    expect(li[slots - 1]?.getAttribute('data-v')).toBe(`v${slots - 1}`);
+  });
+
+  it('renders 31 patch slots through the bitmask and 32 through the string fallback', () => {
+    for (const slots of [31, 32]) {
+      const host = document.createElement('div');
+      const sigs = Array.from({length: slots}, (_, i) => sig(`v${i}`));
+      const strs = Array.from({length: slots + 1}, (_, i) =>
+        i === 0 ? '<ul><li ' : i === slots ? '></li></ul>' : '></li><li ',
+      ) as unknown as TemplateStringsArray;
+
+      render(html(strs, ...sigs.map((s) => patch(attr(s, 'data-v')))), host);
+
+      const li = host.querySelectorAll('li');
+      expect(li.length).toBe(slots);
+      expect(li[slots - 1]?.getAttribute('data-v')).toBe(`v${slots - 1}`);
+    }
   });
 });

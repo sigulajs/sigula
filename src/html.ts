@@ -11,7 +11,8 @@ const MARK = `@sig_${Math.random().toFixed(9).slice(2)}`;
 interface Tpl {
   el: HTMLTemplateElement;
   indexes: number[];
-  shape: string;
+  // a bitmask for up to 31 slots, the string form beyond that
+  shape: number | string;
 }
 
 interface Wrap<T, C extends CmdContext> {
@@ -40,10 +41,22 @@ const _toMark = (item: Patch | View): string =>
 // gets an attribute marker, a view gets a comment marker. Reusing a cached
 // template across a different mix would hand the wrong node type to
 // commitPatch/commitView, so the mix is part of the cache identity.
-const _shape = (items: readonly (Patch | AnyView)[]): string => {
-  let shape = '';
-  for (const item of items) shape += item.type === 'patch' ? 'p' : 'v';
-  return shape;
+// A bitmask is far cheaper to build and compare than a string, and 31 slots
+// keeps it a non-negative int32 — 1 << 31 flips the sign. Beyond that fall
+// back to the string form so wide templates keep working unchanged.
+const MAX_MASKED_SLOTS = 31;
+
+const _shape = (items: readonly (Patch | AnyView)[]): number | string => {
+  if (items.length > MAX_MASKED_SLOTS) {
+    let shape = '';
+    for (const item of items) shape += item.type === 'patch' ? 'p' : 'v';
+    return shape;
+  }
+  let bits = 0;
+  for (let i = 0; i < items.length; i++) {
+    if (items[i]?.type === 'patch') bits |= 1 << i;
+  }
+  return bits;
 };
 
 const _hasMark = (el: Element) => el.hasAttribute(MARK);
