@@ -2,6 +2,12 @@ import {beforeEach, describe, expect, it} from 'vitest';
 import {html, patch, render, sig, text, toggleClass, view} from '..';
 
 describe('html', () => {
+  const capture = (s: TemplateStringsArray, ..._: unknown[]) => s;
+  const drive = html as unknown as (
+    s: TemplateStringsArray,
+    ...items: unknown[]
+  ) => unknown;
+
   beforeEach(() => {
     document.body.innerHTML = '';
   });
@@ -36,30 +42,27 @@ describe('html', () => {
   });
 
   it('rejects too few interpolations for the template', () => {
-    const capture = (s: TemplateStringsArray, ..._: unknown[]) => s;
     const strs = capture`<p>${text('x')}</p>`;
-    const drive = html as unknown as (
-      s: TemplateStringsArray,
-      ...items: unknown[]
-    ) => unknown;
-
+    document.body.innerHTML = '<i>seed</i>';
     expect(() => render(drive(strs) as never, document.body)).toThrowError(
       /expected 1 interpolation, got 0/,
     );
-    expect(document.body.innerHTML).toBe('');
+    expect(document.body.innerHTML).toBe('<i>seed</i>');
   });
 
   it('rejects too many interpolations for the template', () => {
-    const capture = (s: TemplateStringsArray, ..._: unknown[]) => s;
     const strs = capture`<p>${text('x')}</p>`;
-    const drive = html as unknown as (
-      s: TemplateStringsArray,
-      ...items: unknown[]
-    ) => unknown;
-
+    document.body.innerHTML = '<i>seed</i>';
     expect(() =>
       render(drive(strs, text('a'), text('b')) as never, document.body),
     ).toThrowError(/expected 1 interpolation, got 2/);
-    expect(document.body.innerHTML).toBe('');
+    expect(document.body.innerHTML).toBe('<i>seed</i>');
+  });
+
+  it('pluralises the expected count when a template has several slots', () => {
+    const strs = capture`<p>${text('x')}</p><p>${text('y')}</p>`;
+    expect(() =>
+      render(drive(strs, text('a'), text('b'), text('c')) as never, document.body),
+    ).toThrowError(/expected 2 interpolations, got 3/);
   });
 });
