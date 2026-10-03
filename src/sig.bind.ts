@@ -139,6 +139,10 @@ export class DerivedSig<T> extends Sig<T> {
   // cannot be revived in place because removeBind marks them removed, so we
   // rebuild fresh binds from each recipe and recompute once: sources usually
   // moved while we were detached.
+  //
+  // super.addBind must stay first: the recompute below updates this signal
+  // straight away, so the returning observer has to be registered before it
+  // or it misses the value and only catches up on some later update.
   override addBind<C extends CmdContext>(bind: Bind<T, C>) {
     super.addBind(bind);
     if (this._linked) return;
