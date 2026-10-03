@@ -326,7 +326,7 @@ type ValRecord<K extends SigRecord> = {
 const isEqual: <T>(a: T, b: T) => boolean;
 ```
 
-Deep structural equality. Compares primitives, arrays, `Date`, `RegExp`, `Map`, `Set`, and plain objects, and defers to `a.equals(b)` when `a` implements `Equatable`. This is the default comparator for `Sig.update` and `repeat`.
+Deep structural equality. Compares primitives, arrays, `Date`, `RegExp`, `Map`, `Set`, and plain objects, and defers to `a.equals(b)` when `a` implements `Equatable`. This is the default comparator for `Sig.update` and `repeat`. Two objects with different prototypes are never equal, so instances of different classes and objects from different realms (iframes, workers) always compare unequal.
 
 #### `Equatable`
 

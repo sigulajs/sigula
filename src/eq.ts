@@ -59,9 +59,13 @@ export const isEqual = <T>(a: T, b: T): boolean => {
   // Object.keys is [] for Date, Map, Set, RegExp, Error and [], so without
   // this guard isEqual([], {}) and isEqual(new Date(0), {}) both report
   // equal and Sig.update silently swallows a shape-changing write.
+  // Must stay BELOW the isEquatable check above: hoisting it stops a user
+  // Equatable from ever being consulted.
   if (Object.getPrototypeOf(a) !== Object.getPrototypeOf(b)) return false;
 
-  // both are objects sharing one prototype from here on
+  // both are objects sharing one prototype from here on, and the length check
+  // plus Object.hasOwn below prove the two key sets are identical, so ao[key]
+  // is always an own property
   const ao = a as UnknownRecord;
   const bo = b as UnknownRecord;
 

@@ -135,7 +135,16 @@ describe('isEqual', () => {
     //
     // Boxed primitives are deliberately absent: new Number(1) vs 1 is already
     // false via the typeof mismatch, and new Number(1) vs new Number(1) is
-    // true both before and after the fix, so it would pin nothing.
+    // true both before and after the fix, so it would pin nothing. Boxed
+    // primitives are a separate pre-existing gap, not something the prototype
+    // guard handles.
+    //
+    // The last two rows close the shape-but-not-prototype gap. The
+    // custom-prototype one is the only row that fails if the guard is weakened
+    // to a.constructor !== b.constructor: that prototype inherits constructor
+    // from Object.prototype, so the compare calls it equal to a plain object,
+    // and with no own keys on either side the key compare then agrees. Two
+    // distinct classes cannot catch it, since their constructors do differ.
     const crossType: [string, unknown, unknown][] = [
       ['Date vs object', new Date(5), {}],
       ['Date vs array', new Date(5), []],
@@ -149,6 +158,9 @@ describe('isEqual', () => {
       ['array vs typed array', [1, 2], new Uint8Array([1, 2])],
       ['null-prototype vs object', Object.assign(Object.create(null), {a: 1}), {a: 1}],
       ['class instance vs object', new (class {})(), {}],
+      ['class instance vs array', new (class {})(), []],
+      ['two classes, same shape', new (class { x = 1 })(), new (class { x = 1 })()],
+      ['custom prototype vs object', Object.create({}), {}],
     ];
 
     for (const [name, a, b] of crossType) {
