@@ -10,6 +10,7 @@ const MARK = `@sig_${Math.random().toFixed(9).slice(2)}`;
 interface Tpl {
   el: HTMLTemplateElement;
   indexes: number[];
+  shape: string;
 }
 
 interface Wrap<T, C extends CmdContext> {
@@ -18,13 +19,31 @@ interface Wrap<T, C extends CmdContext> {
 }
 
 const tplCache = new WeakMap<TemplateStringsArray, Tpl>();
-const walker = document.createTreeWalker(
-  document,
-  NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_COMMENT,
-);
+
+let walker: TreeWalker | undefined;
+
+// Created on first use rather than at module scope so that importing sigula
+// stays side-effect free and works where there is no document (SSR, tests).
+const _walker = (): TreeWalker => {
+  walker ??= document.createTreeWalker(
+    document,
+    NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_COMMENT,
+  );
+  return walker;
+};
 
 const _toMark = (item: Patch | View): string =>
   item.type === 'patch' ? MARK : `<!--${MARK}-->`;
+
+// The markup of a call site depends on the kind of every interpolation: a patch
+// gets an attribute marker, a view gets a comment marker. Reusing a cached
+// template across a different mix would hand the wrong node type to
+// commitPatch/commitView, so the mix is part of the cache identity.
+const _shape = (items: readonly (Patch | AnyView)[]): string => {
+  let shape = '';
+  for (const item of items) shape += item.type === 'patch' ? 'p' : 'v';
+  return shape;
+};
 
 const _hasMark = (el: Element) => el.hasAttribute(MARK);
 const _rmMark = (el: Element) => el.removeAttribute(MARK);
@@ -70,8 +89,9 @@ const _scan = (
   hit: (node: Node, nodeIndex: number, itemIndex: number) => boolean,
   indexes?: number[],
 ) => {
-  walker.currentNode = frag;
-  let node = walker.nextNode();
+  const w = _walker();
+  w.currentNode = frag;
+  let node = w.nextNode();
   let nodeIndex = 0;
   let itemIndex = 0;
   while (node !== null && itemIndex < items.length) {
@@ -81,13 +101,13 @@ const _scan = (
       itemIndex++;
       if (node.nodeType === Node.ELEMENT_NODE) _rmMark(node as Element);
     }
-    node = walker.nextNode();
+    node = w.nextNode();
     nodeIndex++;
   }
   // https://github.com/lit/lit/blob/c42ee1e96b8fd61f7256f61d715daef572e76e52/packages/lit-html/src/lit-html.ts#L1260
   // We need to set the currentNode away from the cloned tree so that we
   // don't hold onto the tree even if it is detached and should be freed.
-  walker.currentNode = document;
+  w.currentNode = document;
 };
 
 export const html = (
@@ -98,8 +118,9 @@ export const html = (
   let frag: DocumentFragment;
   const wraps: Wrap<unknown, CmdContext>[] = [];
 
+  const shape = _shape(items);
   const exist = tplCache.get(strs);
-  if (exist) {
+  if (exist?.shape === shape) {
     frag = document.importNode(exist.el.content, true);
     if (items && items.length > 0) {
       _scan(
@@ -112,7 +133,7 @@ export const html = (
   } else {
     const template = document.createElement('template');
     template.innerHTML = _text(strs, ...items);
-    const tpl: Tpl = {el: template, indexes: []};
+    const tpl: Tpl = {el: template, indexes: [], shape};
     frag = document.importNode(template.content, true);
 
     if (items && items.length > 0) {
