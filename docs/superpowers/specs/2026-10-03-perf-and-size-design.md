@@ -140,31 +140,49 @@ has one test with two assertions. The new suite is split by intent.
 **Asserted as corrected** — the 13 cross-type pairs listed above, expecting
 `false`.
 
-### 3. `repeat.ts` — in-place track update (4.0x)
+### 3. `repeat.ts` — in-place track update — REJECTED during validation
 
 `repeat.ts:341-347` `_setTrack` returns `{...old, checked: false, cleaned: false}`
 when an item is unchanged, allocating one object per unchanged row per update.
-Measured at 7.34 us/op for 500 unchanged tracks.
+Measured at 7.34 us/op for 500 unchanged tracks; mutating in place measures
+1.82 us/op, a 4.0x improvement.
 
-Change it to reset the two flags on `old` and return `old`.
+**This change was attempted and rejected. It breaks three existing tests:**
 
-Measured at 1.82 us/op for the same 500 tracks — **4.0x faster**.
+```
+Tests  4 failed | 66 passed
+  x repeat > text
+  x repeat > with html
+  x redundant updates > still updates a track that was reused as-is by an earlier reorder
+```
 
-**Safety argument.** All five call sites in `repeatCmd` assign the result into
-the fresh `newTracks` array, and `ctx.tracks = newTracks` replaces the old array
-at the end of the same synchronous pass, so no aliasing survives the call. Every
-site advances its cursor past the index it just mutated, so the
-`ctx.tracks[oldHead].checked` reads at `:119`/`:123` are unaffected. The
-map-lookup branch at `:213` re-sets `oldTrack.checked = true` immediately after
-`_setTrack`, and `:233` therefore still observes the flag it expects. This is
-also exercised by the existing test "still updates a track that was reused as-is
-by an earlier reorder".
+The last is the repo's own guard against precisely this hazard, and it shows a
+duplicated row:
 
-**New tests** in `repeat.test.ts` pinning the `checked`/`cleaned` bookkeeping:
+```
+Expected: "<li>b</li><li>d</li><li>a</li><li>C-CHANGED</li>"
+Received: "<li>b</li><li>b</li><li>d</li><li>a</li><li>C-CHANGED</li>"
+```
 
-- no bind leak after a reorder that reuses tracks as-is
-- no double-clean (would throw or remove a reused boundary)
-- complete teardown of every track after reorder, insert and remove
+**The static safety argument originally given for this change was wrong.** It
+rested on three claims that are each individually true but jointly insufficient:
+that every call site writes into the fresh `newTracks` array, that `ctx.tracks`
+is replaced before `repeatCmd` returns, and that every site advances its cursor
+past the index it just mutated.
+
+The real constraint is that `checked` and `cleaned` are **per-generation** state.
+The copy returned by `_setTrack` carries `checked: false`, while the object
+remaining in `ctx.tracks` may carry `checked: true` from the keyed-map branch at
+`repeat.ts:233`. The copy is what keeps the two generations independent; a
+mutation makes them one object, so a flag set for the old generation is observed
+by the new one and a track can be matched and placed twice.
+
+Removing the per-generation copy would mean restructuring how `repeat` tracks
+flag state. That is a larger change than this work justifies, so the 4.0x is
+recorded as measured-but-unreachable.
+
+The three bookkeeping **tests** written for this change are kept anyway, as
+regression guards for `repeat`'s flag lifecycle and per-row bind teardown.
 
 ### 4. `sig.bind.ts` — single recompute on `DerivedSig` re-arm
 
@@ -237,9 +255,10 @@ be bisected to a single change.
 3. `eq.test.ts` characterization suite — commit as tests-only, still green
 4. `eq.ts` guard, dead-line removal, indexed loop — the suite from step 3 is the
    safety net
-5. `repeat.test.ts` bookkeeping tests, then `repeat.ts` in-place update
+5. `repeat.test.ts` bookkeeping tests (retained as guards; the in-place
+   `repeat.ts` change they were written for is rejected)
 6. `sig.bind.test.ts` re-arm count test, then `sig.bind.ts` single recompute
-7. README size claim corrected to the measured 4.07 kB gzip
+7. README size claim corrected to the measured gzip figure
 8. Final verification
 
 ## Verification
@@ -257,11 +276,11 @@ still meets or beats its target:
 
 | Change | Target |
 | --- | --- |
-| `repeat` 500 unchanged tracks | ≤ 2.5 us/op (from 7.34) |
-| `DerivedSig` re-arm, 10 sources | 1 compute call (from 10) |
+| `DerivedSig` re-arm, 3 sources | 1 compute call (from 3) |
 | `isEqual` scalar fast path | ≤ 0.008 us/op (from 0.014) |
 | `isEqual` plain object | ≤ 0.10 us/op (unchanged) |
 | `html` `_shape` | ≤ 0.012 us/op (from 0.025) |
+| `repeat` 500 unchanged tracks | no change — see the rejected change above |
 
 The 66 pre-existing tests must remain passing and unmodified except for
 additions.
