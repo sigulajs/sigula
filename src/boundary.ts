@@ -6,19 +6,12 @@ export interface Boundary {
 export const removeBoundary = (b: Boundary) => {
   const parent = b.start.parentNode;
   if (!parent) {
-    // console.warn('boundary has no parent');
     return;
   }
 
-  // if (b.start === b.end) b.start.parentNode?.removeChild(b.start);
   if (b.start === b.end) parent.removeChild(b.start);
   else {
-    // const range = document.createRange();
-    // range.setStartBefore(b.start);
-    // range.setEndAfter(b.end);
-    // range.deleteContents();
-    //
-    // faster without range
+    // walking siblings is faster than a Range
     let n: Node | null = b.start;
     while (n) {
       const next: Node | null = n.nextSibling;
@@ -57,16 +50,5 @@ export const replaceWithNode = (old: Boundary, node: Node) => {
     }
   }
 
-  // if (old.start === old.end) {
-  //   parent.replaceChild(node, old.start);
-  // } else {
-  //   console.log('-----------------------> replace with ndoe + range');
-  //   const doc = old.start.ownerDocument ?? document;
-  //   const range = doc.createRange();
-  //   range.setStartBefore(old.start);
-  //   range.setEndAfter(old.end);
-  //   range.deleteContents();
-  //   range.insertNode(node);
-  // }
   return newBoundary;
 };

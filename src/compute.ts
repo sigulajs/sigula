@@ -23,7 +23,6 @@ const toValRecord = <S extends SigRecord>(source: S): ValRecord<S> => {
 };
 
 interface ComputeContext<S, T> extends CmdContext {
-  // source: Sig<S>;
   target: Sig<T>;
   fn: (s: S) => T;
 }

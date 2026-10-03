@@ -121,9 +121,9 @@ export class Sig<T> implements Equatable {
     return this._binds;
   }
 
-  cleanup() {
-    // console.log('Sig.cleanup', this);
-  }
+  // empty: DerivedSig overrides this to detach from its sources when its last
+  // observer goes away
+  cleanup() {}
 }
 
 export class DerivedSig<T> extends Sig<T> {
