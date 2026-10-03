@@ -386,6 +386,16 @@ describe('repeat', () => {
       {id: 4, label: 'd'},
     ];
 
+    // a rotation that cannot be resolved from the head/tail, so the keyed-map
+    // path runs and reuses tracks that were already placed. Fresh objects per
+    // call, matching how every test here builds its input
+    const rotated = (): Item[] => [
+      {...(items[1] as Item)},
+      {...(items[3] as Item)},
+      {...(items[0] as Item)},
+      {...(items[2] as Item)},
+    ];
+
     // counts structural DOM writes so we can assert an unchanged re-render
     // never touches the DOM at all
     type MutMethod = 'insertBefore' | 'removeChild' | 'replaceChild';
@@ -474,14 +484,6 @@ describe('repeat', () => {
     });
 
     it('still updates a track that was reused as-is by an earlier reorder', async () => {
-      // a rotation that cannot be resolved from the head/tail, so the keyed
-      // map path runs and reuses tracks that were already placed
-      const rotated: Item[] = [
-        {...(items[1] as Item)},
-        {...(items[3] as Item)},
-        {...(items[0] as Item)},
-        {...(items[2] as Item)},
-      ];
       const signal = sig<Item[]>(items.map((i) => ({...i})));
       render(
         html`<div><ul>${repeat(signal, {
@@ -491,7 +493,7 @@ describe('repeat', () => {
         document.body,
       );
 
-      signal.forceUpdate(rotated);
+      signal.forceUpdate(rotated());
       await Promise.resolve();
       await Promise.resolve();
       expect(document.querySelector('ul')?.innerHTML).toBe(
@@ -530,14 +532,8 @@ describe('repeat', () => {
         expect(l.getBinds().length).toBe(1);
       }
 
-      // a rotation that cannot be resolved from the head/tail, forcing the
-      // keyed-map path that reuses tracks as-is
-      signal.forceUpdate([
-        {...(items[1] as Item)},
-        {...(items[3] as Item)},
-        {...(items[0] as Item)},
-        {...(items[2] as Item)},
-      ]);
+      // the shared rotation fixture, so this runs the same reuse path
+      signal.forceUpdate(rotated());
       await Promise.resolve();
       await Promise.resolve();
 
@@ -575,7 +571,37 @@ describe('repeat', () => {
       }
     });
 
-    it('cleans each surviving track exactly once when items are removed', async () => {
+    it('tears down rows that a reorder already re-parented', async () => {
+      // the tests above either reorder or tear down, never both; crossing
+      // both keeps the keyed-map reuse path and the teardown on the same
+      // generation boundary, which is where a track object shared between
+      // generations would show up as a duplicated or leaked row
+      const labels = new Map(items.map((i) => [i.id, sig(i.label)]));
+      const signal = sig<Item[]>(items.map((i) => ({...i})));
+      render(
+        html`<div><ul>${repeat(signal, {
+          key: (item) => item.id.toString(),
+          view: (item) => html`<li>${text(labels.get(item.id) as Sig<string>)}</li>`,
+        })}</ul></div>`,
+        document.body,
+      );
+
+      signal.forceUpdate(rotated());
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(document.querySelectorAll('li').length).toBe(4);
+
+      signal.forceUpdate([]);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(document.querySelectorAll('li').length).toBe(0);
+      for (const l of labels.values()) {
+        expect(l.getBinds().length).toBe(0);
+      }
+    });
+
+    it('keeps the surviving head and tail when the middle rows are removed', async () => {
       const signal = sig<Item[]>(items.map((i) => ({...i})));
       render(
         html`<div><ul>${repeat(signal, {
@@ -585,7 +611,7 @@ describe('repeat', () => {
         document.body,
       );
 
-      // drop the middle two, keeping a head and a tail survivor
+      // drop the middle two; the head and tail survive and are reused in place
       signal.forceUpdate([
         {...(items[0] as Item)},
         {...(items[3] as Item)},
@@ -593,12 +619,12 @@ describe('repeat', () => {
       await Promise.resolve();
       await Promise.resolve();
 
-      expect(document.querySelector('ul')?.innerHTML).toBe(
-        '<li>a</li><li>d</li>',
-      );
-      // no internal fences leaked into the output
-      expect(document.body.innerHTML).not.toContain('repeat-start-fence');
-      expect(document.body.innerHTML).not.toContain('repeat-end-fence');
+      // one scope for both checks: the fences bracket the whole repeat, so
+      // they can only be judged against the full rendered output
+      const out = document.body.innerHTML;
+      expect(out).toBe('<div><ul><li>a</li><li>d</li></ul></div>');
+      expect(out).not.toContain('repeat-start-fence');
+      expect(out).not.toContain('repeat-end-fence');
     });
   });
 });
