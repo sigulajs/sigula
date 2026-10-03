@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Fix a live equality bug that silently swallows shape-changing signal writes, and land four measured performance wins in `sigula`'s hottest paths.
+**Goal:** Fix a live equality bug that silently swallows shape-changing signal writes, and land three measured performance wins in `sigula`'s hottest paths.
 
-**Architecture:** Five independent changes to existing modules, each committed separately and each leaving the suite green so a regression bisects to one change. No new modules, no public API changes (the `isEqual` fix corrects wrong answers rather than changing signatures). The `html` cache-hit slot-lookup optimisation is explicitly deferred.
+**Architecture:** Four independent changes to existing modules, each committed separately and each leaving the suite green so a regression bisects to one change. No new modules, no public API changes (the `isEqual` fix corrects wrong answers rather than changing signatures). The `html` cache-hit slot-lookup optimisation is explicitly deferred.
 
 **Tech Stack:** TypeScript 7.0.2 (strict, `noUnusedLocals`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`), vitest 5.0.2 + happy-dom 20.14.5, tsdown 0.23.0, pnpm 12.8.1.
 
@@ -19,8 +19,7 @@
 | `src/eq.ts` | Modify | Structural equality. Gains a prototype-identity guard that rejects cross-type comparisons; loses two dead branches and the orphaned `isRecord` helper. |
 | `src/test/eq.test.ts` | Modify | Characterization suite for `isEqual`, split into "pin current" and "assert corrected". |
 | `src/html.ts` | Modify | `_shape` returns a bitmask for ≤31 slots. `Tpl.shape` widens to `number \| string`. |
-| `src/repeat.ts` | Modify | `_setTrack` resets track flags in place instead of spreading. |
-| `src/test/repeat.test.ts` | Modify | Adds `checked`/`cleaned` bookkeeping tests. |
+| `src/test/repeat.test.ts` | Modify | Adds `checked`/`cleaned` bookkeeping tests as regression guards. `src/repeat.ts` itself is **not** modified (Task 6 was rejected). |
 | `src/sig.bind.ts` | Modify | `DerivedSig.addBind` recomputes once on re-arm instead of once per source. Drops one commented-out line. |
 | `src/test/sig.bind.test.ts` | Modify | Adds a re-arm recompute-count test. |
 | `src/live.ts` | Delete | Dead. `LIVE`, `LiveBoundary`, `liveBoundary` are imported by nothing. |
@@ -189,8 +188,7 @@ it('renders a template with more than 31 interpolations', () => {
     i === 0 ? '<ul>' : i === slots ? '</ul>' : '<li></li>',
   ) as unknown as TemplateStringsArray;
 
-  const view = html(strs, ...sigs.map((s) => text(s)));
-  host.appendChild(view.node);
+  render(html(strs, ...sigs.map((s) => text(s))), host);
 
   expect(host.querySelectorAll('li').length).toBe(slots);
   expect(host.textContent).toBe(
@@ -199,7 +197,11 @@ it('renders a template with more than 31 interpolations', () => {
 });
 ```
 
-If `src/test/html.test.ts` does not already import `sig` and `text` from `'..'`, add them to its existing import list.
+`src/test/html.test.ts` already imports `html`, `render`, `sig` and `text` from
+`'..'` on line 2, so no import change is needed. Use `render(view, host)` rather
+than `host.appendChild(view.node)` — `View['node']` is the view's leading marker
+node (a comment for a text-only view), not a fragment boundary, so appending it
+directly would insert nothing.
 
 - [ ] **Step 2: Run the test to verify the current state**
 
