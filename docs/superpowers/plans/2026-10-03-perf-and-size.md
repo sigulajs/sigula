@@ -508,8 +508,32 @@ The suite is intentionally red at this commit. Task 4 turns it green.
 - Modify: `src/eq.ts:5-9`, `src/eq.ts:11-14`, `src/eq.ts:60-73`
 
 **Why:** The prototype guard rejects comparisons where the two values are not
-the same kind of thing. Measured free on the hot path: plain object 0.093 →
-0.093 us/op, scalar 0.014 → 0.007 us/op, 50-object array 0.305 → 0.304 us/op.
+the same kind of thing. It costs two `Object.getPrototypeOf` calls per object
+comparison; see the correction below for measured numbers.
+
+**Correction (measured after implementation, on the reviewing machine).** The
+original claim that the guard is "measured free on the hot path" does not hold.
+The guard costs two `Object.getPrototypeOf` calls per object comparison:
+
+| bench | before | after | delta |
+| --- | --- | --- | --- |
+| 2-key plain object | 0.073-0.077 us/op | 0.080-0.087 us/op | +11-15% |
+| scalar (`isEqual(1, 1)`) | 0.007 us/op | 0.007 us/op | 0% |
+| 50-object array | 2.48-2.63 us/op | 3.13-3.33 us/op | +22-30% |
+
+A deep diff pays the guard once per element, which is why the array case pays
+the most. This is the price of correctness: a deep object diff is precisely the
+case that was reporting unequal values as equal and silently dropping writes.
+
+Two claims in the original text were wrong and are retracted:
+
+- The "scalar 0.014 -> 0.007 us/op" win **cannot come from this change**.
+  `isEqual(1, 1)` returns at the `a === b` check before any line the diff
+  touches, so that benchmark structurally cannot measure it. It measured
+  0.007 both before and after.
+- The absolute baselines came from different hardware (the 50-object array
+  figure is off by roughly 8x), so only the *direction* of a change measured
+  on one machine is meaningful here.
 
 - [ ] **Step 1: Add the prototype guard and take over `isRecord`'s narrowing role**
 
@@ -640,11 +664,15 @@ Map, Set, RegExp, Error and []. So isEqual([], {}), isEqual(new Date(0), {})
 and a dozen more returned true, and because isEqual gates Sig.update a
 signal changing shape had its write swallowed with no observer notified.
 
-Guard the fallback with a prototype-identity check. Measured free on the hot
-path: plain object 0.093 -> 0.093 us/op, scalar 0.014 -> 0.007 us/op.
+Guard the fallback with a prototype-identity check. The guard is not free: two
+Object.getPrototypeOf calls per object comparison, measured at +11-15% for a
+2-key object and +22-30% for a 50-object array, since a deep diff pays the
+guard once per element. That is the price of correctness here.
 
-Also drops the unreachable Object.is and isRecord branches and switches the
-key loop to an index loop."
+Also drops the provably dead Object.is and isRecord branches and switches the
+key loop to an index loop. Object.is was unreachable: by that point both
+operands were guaranteed non-null objects, for which Object.is is reference
+identity, which the earlier a === b had already returned true for.
 ```
 
 ---

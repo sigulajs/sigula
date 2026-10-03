@@ -277,8 +277,8 @@ still meets or beats its target:
 | Change | Target |
 | --- | --- |
 | `DerivedSig` re-arm, 3 sources | 1 compute call (from 3) |
-| `isEqual` scalar fast path | ≤ 0.008 us/op (from 0.014) |
-| `isEqual` plain object | ≤ 0.10 us/op (unchanged) |
+| `isEqual` plain object | ≤ 0.10 us/op (0.087 measured after; the guard costs +11-15%, it is not free) |
+| `isEqual` 50-object array | ≤ 3.4 us/op (3.20 measured after; +22-30%) |
 | `html` `_shape` | ≤ 0.012 us/op (from 0.025) |
 | `repeat` 500 unchanged tracks | no change — see the rejected change above |
 
