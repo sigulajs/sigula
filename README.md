@@ -393,7 +393,7 @@ html`<p>${text(label)}</p>`;
 html`<button ${patch(on('click', handler))}>Go</button>`;
 ```
 
-Templates are cached per call site, so repeated renders skip parsing. Using `patch(...)` in a content position throws `html: unmatched interpolation; patch() must be in attribute position`.
+Templates are cached per call site, so repeated renders skip parsing. Using `patch(...)` in a content position throws `html: unmatched interpolation; patch() must be in attribute position`. An interpolation count that does not match the number of slots throws `html: expected N interpolation(s), got M`; a mismatch means the cached template for that call site was built from a different mix of interpolations.
 
 #### `text`
 
@@ -619,15 +619,21 @@ html`<ul>${repeat(todos, {
 #### `render`
 
 ```ts
-const render: (viewArg: AnyView | (() => AnyView), node: Node) => void;
+const render: (
+  viewArg: AnyView | (() => AnyView),
+  node: Node,
+) => () => void;
 ```
 
-Mounts a view into `node` by appending `view.node`. Accepts a `View` directly or a factory function that returns one.
+Mounts a view into `node` by appending `view.node`. Accepts a `View` directly or a factory function that returns one. Returns a disposer that detaches every bind in the tree and removes the nodes from `node`, so a mounted tree can be torn down completely. Calling the disposer twice is a no-op.
 
 ```ts
-render(App(), document.querySelector('#app')!);
+const dispose = render(App(), document.querySelector('#app')!);
 render(() => html`<p>lazy</p>`, document.body);
+dispose();
 ```
+
+A view that swaps its own contents — one built with `view()` or `repeat()` at the root — disposes the nodes currently in `node`, not the ones originally appended. An empty template such as html`` renders nothing and its disposer is a no-op.
 
 ### Low-level API
 

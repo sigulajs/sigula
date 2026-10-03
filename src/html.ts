@@ -1,5 +1,7 @@
+import {toBoundary} from './boundary';
 import type {CmdContext} from './cmd';
 import type {Commit} from './commit';
+import {LIVE} from './live';
 import type {Patch, PatchContext} from './patch';
 import {type Bind, createBind, Sig} from './sig.bind';
 import {at} from './utils';
@@ -173,10 +175,13 @@ export const html = (
     }
   });
 
+  const boundary = frag.firstChild ? toBoundary(frag) : undefined;
+
   return {
     type: 'view',
     node: frag,
     childCommits: commits,
+    [LIVE]: () => boundary,
   };
 };
 

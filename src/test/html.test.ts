@@ -62,7 +62,10 @@ describe('html', () => {
   it('pluralises the expected count when a template has several slots', () => {
     const strs = capture`<p>${text('x')}</p><p>${text('y')}</p>`;
     expect(() =>
-      render(drive(strs, text('a'), text('b'), text('c')) as never, document.body),
+      render(
+        drive(strs, text('a'), text('b'), text('c')) as never,
+        document.body,
+      ),
     ).toThrowError(/expected 2 interpolations, got 3/);
   });
 });

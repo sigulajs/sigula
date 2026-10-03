@@ -144,3 +144,21 @@ describe('view', () => {
     expect(document.body.innerHTML).toBe('<p>20</p>');
   });
 });
+
+it('disposes a view tree containing nested views', () => {
+  const outer = sig(true);
+  const inner = sig(1);
+  const el = document.createElement('div');
+
+  const dispose = render(
+    html`<div>${view(outer, (v) =>
+      v ? html`<span>${text(inner)}</span>` : html`<span>off</span>`,
+    )}</div>`,
+    el,
+  );
+  expect(inner.getBinds().length).toBe(1);
+
+  dispose();
+  expect(inner.getBinds().length).toBe(0);
+  expect(outer.getBinds().length).toBe(0);
+});
