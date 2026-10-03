@@ -445,9 +445,36 @@ describe('isEqual', () => {
 - [ ] **Step 2: Run the tests to confirm the bug is reproduced**
 
 Run: `npx vitest run src/test/eq.test.ts`
-Expected: the `pinned current behaviour` group all PASS. The `cross-type comparisons` group **FAILS** with 13 failures (`expected true to be false`), and `propagates a write that changes the value shape` **FAILS** with `expected '[object Object]' to be ''`.
+Expected: the `pinned current behaviour` group all PASS. The `cross-type comparisons` group **FAILS** with 12 failures (`expected true to be false`), and `propagates a write that changes the value shape` **FAILS** with `expected '[object Object]' to be ''`.
 
-Expected summary line: `Tests  14 failed | 15 passed (29)`. The 13 cross-type tests fail (the `array vs array-like` case already returns `false` and passes), plus the signal test, so 14 failing out of 29. Verified against the current code.
+Expected summary line: `Tests  13 failed | 15 passed (28)`. Verified against the current code after code review revised the table (see below).
+
+**Revised during code review.** The original 14-row table was wrong in three ways,
+all found by mutation testing the suite against plausible wrong fixes:
+
+- Five rows (`object vs Date/Map/Set/array/RegExp`) were accidental mirrors of
+  rows already present; the loop already asserts both directions. They are gone —
+  12 distinct pairs remain.
+- `array vs array-like` used `{0: 1, 1: 2, length: 2}`, which was rejected by the
+  key-*count* check rather than the prototype guard, so it passed for the wrong
+  reason and would still pass with the guard deleted. It is now `{0: 1, 1: 2}`,
+  which reproduces the bug.
+- Three rows were added to make the fix's blast radius explicit: `array vs typed
+  array`, `null-prototype vs object`, `class instance vs object`.
+
+Two further pins were added because **two wrong fixes passed 29/29**:
+
+- Key-order independence (`isEqual({a: 1, b: 2}, {b: 2, a: 1})` is `true`).
+  Task 4 rewrites this key loop, and swapping `Object.hasOwn(b, key)` for a
+  positional `key !== bKeys[i]` compare is a tempting optimisation that would
+  turn every key reorder into a spurious re-render.
+- `equals` asymmetry via classes, not plain objects. Plain objects share
+  `Object.prototype`, so they cannot detect the prototype guard being hoisted
+  above `isEquatable` and silently disabling the exported `Equatable` contract.
+
+All three mutations were confirmed: the positional compare and the hoisted guard
+are now caught, while the intended guard placed after `isEquatable` is 28/28
+green.
 
 - [ ] **Step 3: Confirm the whole suite is otherwise still green**
 
@@ -579,11 +606,12 @@ Expected: PASS. All 14 previously-failing tests now pass, and every pinned test 
 - [ ] **Step 5: Run the full suite and typecheck**
 
 Run: `pnpm typecheck && pnpm test`
-Expected: typecheck clean, `Test Files 9 passed (9)`, `Tests 99 passed (99)`.
+Expected: typecheck clean, `Test Files 9 passed (9)`, `Tests 96 passed (96)`.
 
-Count: 66 baseline, minus the 1 old `eq` test, plus 29 new `eq` tests (14 pinned
-+ 14 cross-type + 1 signal), plus 1 from Task 2, plus 3 from Task 5, plus 1 from
-Task 7 = 99. Verified: `src/test/eq.test.ts` alone reports `14 failed | 15 passed (29)`. If the reported number differs, trust the runner — but every test
+Count: 66 baseline, plus 3 from Task 2 = 69, minus the 1 old `eq` test, plus 28
+new `eq` tests (15 pinned + 12 cross-type + 1 signal) = 96, plus 3 from Task 5,
+plus 1 from Task 7 = **100**. Verified: `src/test/eq.test.ts` alone reports
+`13 failed | 15 passed (28)` and the full suite reports 96. If the reported number differs, trust the runner — but every test
 must pass and none may be skipped or `.only`'d.
 
 - [ ] **Step 6: Verify the perf claim**
