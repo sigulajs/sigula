@@ -115,6 +115,13 @@ export const html = (
   ...items: (Patch | AnyView)[]
 ): View => {
   // const frag = document.createDocumentFragment();
+  const slots = strs.length - 1;
+  if (items.length !== slots) {
+    throw new Error(
+      `html: expected ${slots} interpolation${slots === 1 ? '' : 's'}, got ${items.length}`,
+    );
+  }
+
   let frag: DocumentFragment;
   const wraps: Wrap<unknown, CmdContext>[] = [];
 

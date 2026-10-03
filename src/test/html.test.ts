@@ -34,4 +34,32 @@ describe('html', () => {
     await Promise.resolve();
     expect(document.body.innerHTML).toBe('<td>b</td>');
   });
+
+  it('rejects too few interpolations for the template', () => {
+    const capture = (s: TemplateStringsArray, ..._: unknown[]) => s;
+    const strs = capture`<p>${text('x')}</p>`;
+    const drive = html as unknown as (
+      s: TemplateStringsArray,
+      ...items: unknown[]
+    ) => unknown;
+
+    expect(() => render(drive(strs) as never, document.body)).toThrowError(
+      /expected 1 interpolation, got 0/,
+    );
+    expect(document.body.innerHTML).toBe('');
+  });
+
+  it('rejects too many interpolations for the template', () => {
+    const capture = (s: TemplateStringsArray, ..._: unknown[]) => s;
+    const strs = capture`<p>${text('x')}</p>`;
+    const drive = html as unknown as (
+      s: TemplateStringsArray,
+      ...items: unknown[]
+    ) => unknown;
+
+    expect(() =>
+      render(drive(strs, text('a'), text('b')) as never, document.body),
+    ).toThrowError(/expected 1 interpolation, got 2/);
+    expect(document.body.innerHTML).toBe('');
+  });
 });
