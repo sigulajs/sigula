@@ -128,17 +128,32 @@ export class Sig<T> implements Equatable {
 
 export class DerivedSig<T> extends Sig<T> {
   private _fromBinds: AnyBind[] = [];
+  private _linked = true;
 
   addFromBind<S, C extends CmdContext>(bind: Bind<S, C>) {
     this._fromBinds.push(bind);
   }
 
-  override cleanup() {
-    this._fromBinds.forEach((bind) => {
-      removeBind(bind);
+  // A derived signal's upstream links are torn down when its last observer
+  // goes away, which happens any time a view() subtree is hidden. The links
+  // cannot be revived in place because removeBind marks them removed, so we
+  // rebuild fresh binds from each recipe and recompute once: sources usually
+  // moved while we were detached.
+  override addBind<C extends CmdContext>(bind: Bind<T, C>) {
+    super.addBind(bind);
+    if (this._linked) return;
+    this._linked = true;
+    this._fromBinds = this._fromBinds.map((f) => {
+      const fresh = createBind(f.sig, f.context, f.cmd);
+      fresh.cmd(fresh.sig.get(), fresh.context);
+      return fresh;
     });
+  }
 
-    // console.log('DerivedSig.cleanup', this);
+  override cleanup() {
+    if (!this._linked) return;
+    this._linked = false;
+    for (const b of this._fromBinds) removeBind(b);
   }
 }
 

@@ -100,4 +100,47 @@ describe('view', () => {
 
     expect(document.body.innerHTML).toBe('<p>B<b>TAIL</b></p>');
   });
+
+  it('keeps a computed value live across a hide and re-show', async () => {
+    const source = sig(1);
+    const doubled = compute(source, (v) => v * 2);
+    const show = sig(true);
+
+    render(
+      html`<p>${view(show, (v) => (v ? text(doubled) : text('off')))}</p>`,
+      document.body,
+    );
+    expect(document.body.innerHTML).toBe('<p>2</p>');
+
+    show.update(false);
+    await Promise.resolve();
+    expect(document.body.innerHTML).toBe('<p>off</p>');
+
+    source.update(9);
+    await Promise.resolve();
+
+    show.update(true);
+    await Promise.resolve();
+    expect(document.body.innerHTML).toBe('<p>18</p>');
+  });
+
+  it('keeps propagating after a computed value is re-shown', async () => {
+    const source = sig(1);
+    const doubled = compute(source, (v) => v * 2);
+    const show = sig(true);
+
+    render(
+      html`<p>${view(show, (v) => (v ? text(doubled) : text('off')))}</p>`,
+      document.body,
+    );
+
+    show.update(false);
+    await Promise.resolve();
+    show.update(true);
+    await Promise.resolve();
+
+    source.update(10);
+    await Promise.resolve();
+    expect(document.body.innerHTML).toBe('<p>20</p>');
+  });
 });

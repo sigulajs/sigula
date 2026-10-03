@@ -1,5 +1,5 @@
 import {describe, expect, it, vi} from 'vitest';
-import {createBind, removeBind, sig} from '..';
+import {compute, createBind, removeBind, sig} from '..';
 
 const flush = async () => {
   await Promise.resolve();
@@ -182,5 +182,53 @@ describe('queue coalescing', () => {
       expect.anything(),
     );
     spy.mockRestore();
+  });
+});
+
+describe('DerivedSig re-arm', () => {
+  it('stays live with no observer', async () => {
+    const source = sig(1);
+    const doubled = compute(source, (v) => v * 2);
+
+    expect(doubled.get()).toBe(2);
+    source.update(5);
+    await Promise.resolve();
+    expect(doubled.get()).toBe(10);
+  });
+
+  it('re-arms, then propagates through a chain', async () => {
+    const source = sig(1);
+    const doubled = compute(source, (v) => v * 2);
+
+    const observer = createBind(doubled, {} as never, (() => {}) as never);
+    doubled.removeBind(observer as never);
+    expect(source.getBinds().length).toBe(0);
+
+    source.update(3);
+    await Promise.resolve();
+    expect(doubled.get()).toBe(2);
+
+    createBind(doubled, {} as never, (() => {}) as never);
+    expect(doubled.get()).toBe(6);
+
+    const quadrupled = compute(doubled, (v) => v * 2);
+    expect(quadrupled.get()).toBe(12);
+
+    source.update(4);
+    await Promise.resolve();
+    expect(doubled.get()).toBe(8);
+    expect(quadrupled.get()).toBe(16);
+  });
+
+  it('does not duplicate source binds when cleanup runs twice', () => {
+    const source = sig(1);
+    const doubled = compute(source, (v) => v * 2);
+
+    const bind = createBind(doubled, {} as never, (() => {}) as never);
+    doubled.removeBind(bind as never);
+    expect(source.getBinds().length).toBe(0);
+
+    doubled.cleanup();
+    expect(source.getBinds().length).toBe(0);
   });
 });
