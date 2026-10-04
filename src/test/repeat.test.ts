@@ -524,7 +524,8 @@ describe('repeat', () => {
       render(
         html`<div><ul>${repeat(signal, {
           key: (item) => item.id.toString(),
-          view: (item) => html`<li>${text(labels.get(item.id) as Sig<string>)}</li>`,
+          view: (item) =>
+            html`<li>${text(labels.get(item.id) as Sig<string>)}</li>`,
         })}</ul></div>`,
         document.body,
       );
@@ -551,7 +552,8 @@ describe('repeat', () => {
       render(
         html`<div><ul>${repeat(signal, {
           key: (item) => item.id.toString(),
-          view: (item) => html`<li>${text(labels.get(item.id) as Sig<string>)}</li>`,
+          view: (item) =>
+            html`<li>${text(labels.get(item.id) as Sig<string>)}</li>`,
         })}</ul></div>`,
         document.body,
       );
@@ -581,7 +583,8 @@ describe('repeat', () => {
       render(
         html`<div><ul>${repeat(signal, {
           key: (item) => item.id.toString(),
-          view: (item) => html`<li>${text(labels.get(item.id) as Sig<string>)}</li>`,
+          view: (item) =>
+            html`<li>${text(labels.get(item.id) as Sig<string>)}</li>`,
         })}</ul></div>`,
         document.body,
       );
@@ -612,10 +615,7 @@ describe('repeat', () => {
       );
 
       // drop the middle two; the head and tail survive and are reused in place
-      signal.forceUpdate([
-        {...(items[0] as Item)},
-        {...(items[3] as Item)},
-      ]);
+      signal.forceUpdate([{...(items[0] as Item)}, {...(items[3] as Item)}]);
       await Promise.resolve();
       await Promise.resolve();
 

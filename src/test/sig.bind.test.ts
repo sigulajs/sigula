@@ -1,5 +1,14 @@
 import {describe, expect, it, vi} from 'vitest';
-import {compute, createBind, html, removeBind, render, sig, text, view} from '..';
+import {
+  compute,
+  createBind,
+  html,
+  removeBind,
+  render,
+  sig,
+  text,
+  view,
+} from '..';
 
 const flush = async () => {
   await Promise.resolve();

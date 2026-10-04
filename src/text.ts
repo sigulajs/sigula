@@ -1,3 +1,4 @@
+import {toBoundary} from './boundary';
 import type {PatchContext} from './patch';
 import {createBind, removeBind, Sig} from './sig.bind';
 import type {View} from './view';
@@ -13,11 +14,12 @@ export const text = <T>(source: T | Sig<T>): View<T, PatchContext> => {
   const ctx: PatchContext = {node: text};
   const bind =
     source instanceof Sig ? createBind(source, ctx, textCmd) : undefined;
+  const boundary = toBoundary(text);
   return {
     type: 'view',
     node: text,
     bind,
-    boundary: () => ({start: text, end: text}),
+    boundary: () => boundary,
     cleanBinds: () => {
       if (bind) removeBind(bind);
     },

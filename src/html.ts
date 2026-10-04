@@ -1,5 +1,6 @@
 import {toBoundary} from './boundary';
 import type {CmdContext} from './cmd';
+import {err} from './err';
 import type {Patch, PatchContext} from './patch';
 import {type Bind, createBind, removeBind, Sig} from './sig.bind';
 import {at} from './utils';
@@ -64,7 +65,6 @@ const _isView = (item: Comment) => item.data.trim() === MARK;
 
 const commitView = <T, C extends CmdContext>(view: View<T, C>, node: Node) => {
   (node as Comment).replaceWith(view.node);
-  view.isCommited = true;
 };
 
 const commitPatch = (patch: Patch, node: Node) => {
@@ -74,20 +74,14 @@ const commitPatch = (patch: Patch, node: Node) => {
     if (item.source instanceof Sig) {
       item.cmd(item.source.get(), item.context);
       binds.push(createBind(item.source, item.context, item.cmd));
-      // binds.push(item.source, item.context, item.cmd);
     } else {
       item.cmd(item.source, item.context);
     }
   });
 
-  patch.isCommited = true;
-  patch.binds = binds;
   patch.cleanBinds = () => {
-    binds.forEach((b) => {
-      removeBind(b);
-    });
+    binds.forEach(removeBind);
   };
-  patch.boundary = () => ({start: node, end: node});
 };
 
 // Both template passes walk the same tree hunting for the next interpolation
@@ -125,16 +119,9 @@ export const html = (
   strs: TemplateStringsArray,
   ...items: (Patch | AnyView)[]
 ): View => {
-  if (strs.length <= 1 && !strs?.[0]) {
-    throw new Error('html: empty');
-  }
-  // const frag = document.createDocumentFragment();
+  if (strs.length <= 1 && !strs?.[0]) err('E10');
   const slots = strs.length - 1;
-  if (items.length !== slots) {
-    throw new Error(
-      `html: expected ${slots} interpolation${slots === 1 ? '' : 's'}, got ${items.length}`,
-    );
-  }
+  if (items.length !== slots) err(`E11:${slots}:${items.length}`);
 
   let frag: DocumentFragment;
   const wraps: Wrap<unknown, CmdContext>[] = [];
@@ -173,46 +160,38 @@ export const html = (
     tplCache.set(strs, tpl);
   }
 
-  if (wraps.length !== items.length)
-    throw new Error(
-      'html: unmatched interpolation; patch() must be in attribute position',
-    );
+  if (wraps.length !== items.length) err('E12');
 
-  // const commits: Commit<unknown>[] = [];
   wraps.forEach(({item, node}) => {
-    if (item.type === 'patch') {
-      commitPatch(item, node);
-    } else if (item.type === 'view') {
-      commitView(item, node);
-    }
+    if (item.type === 'patch') commitPatch(item, node);
+    else commitView(item, node);
   });
   const children = wraps.map((w) => w.item);
-
-  const boundary = frag.firstChild ? toBoundary(frag) : undefined;
-  if (!boundary) throw new Error('html: empty boundary'); // impossible
+  const boundary = toBoundary(frag);
 
   return {
     type: 'view',
     node: frag,
     children,
     boundary: () => {
-      if (boundary) {
-        const last = strs.length - 1;
-        if (!strs[0]) {
-          const newStart = children[0]?.boundary().start;
-          if (newStart) boundary.start = newStart;
-        }
-        if (!strs[last]) {
-          const newEnd = children[last - 1]?.boundary().end;
-          if (newEnd) boundary.end = newEnd;
-        }
+      // A view swapping its own contents changes the node at the edge, so when
+      // the template begins or ends with an interpolation track that edge.
+      const last = strs.length - 1;
+      if (!strs[0]) {
+        const first = children[0];
+        if (first?.type === 'view') boundary.start = first.boundary().start;
+      }
+      if (!strs[last]) {
+        const endChild = children[last - 1];
+        if (endChild?.type === 'view') boundary.end = endChild.boundary().end;
       }
       return boundary;
     },
-    cleanBinds: () =>
+    cleanBinds: () => {
       children.forEach((child) => {
         child.cleanBinds();
-      }),
+      });
+    },
   };
 };
 

@@ -42,8 +42,7 @@ class Queue {
     this.running = true;
     try {
       while (this.head < this._binds.length) {
-        const bind = this._binds[this.head++];
-        if (!bind) throw new Error('Queue.flush: empty bidn');
+        const bind = this._binds[this.head++] as AnyBind;
         try {
           const {removed, sig, context, cmd} = bind;
           if (!removed) cmd(sig.get(), context);
@@ -104,11 +103,11 @@ export class Sig<T> implements Equatable {
     this.update(fn(this._val));
   }
 
-  addBind<C extends CmdContext = any>(bind: Bind<T, C>) {
+  addBind<C extends CmdContext>(bind: Bind<T, C>) {
     this._binds.push(bind);
   }
 
-  removeBind<C extends CmdContext = any>(bind: Bind<T, C>) {
+  removeBind<C extends CmdContext>(bind: Bind<T, C>) {
     const index = this._binds.indexOf(bind);
     if (index >= 0) this._binds.splice(index, 1);
     if (this._binds.length === 0) {
@@ -147,8 +146,7 @@ export class DerivedSig<T> extends Sig<T> {
     if (this._linked) return;
     this._linked = true;
     for (let i = 0; i < this._fromBinds.length; i++) {
-      const f = this._fromBinds[i];
-      if (!f) throw new Error('empty f');
+      const f = this._fromBinds[i] as AnyBind;
       this._fromBinds[i] = createBind(f.sig, f.context, f.cmd);
     }
     // every from-bind shares one context whose cmd reads all sources, so one
@@ -166,9 +164,7 @@ export class DerivedSig<T> extends Sig<T> {
 
 export const sig = <T>(v: T) => new Sig(v);
 
-export const removeBind = <T = unknown, C extends CmdContext = any>(
-  bind: Bind<T, C>,
-) => {
+export const removeBind = <T, C extends CmdContext>(bind: Bind<T, C>) => {
   bind.removed = true;
   bind.sig.removeBind(bind);
 };

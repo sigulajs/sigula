@@ -394,7 +394,7 @@ html`<p>${text(label)}</p>`;
 html`<button ${patch(on('click', handler))}>Go</button>`;
 ```
 
-Templates are cached per call site, so repeated renders skip parsing. Using `patch(...)` in a content position throws `html: unmatched interpolation; patch() must be in attribute position`. An interpolation count that does not match the number of slots throws `html: expected N interpolation(s), got M`; a mismatch means the cached template for that call site was built from a different mix of interpolations.
+Templates are cached per call site, so repeated renders skip parsing. Using `patch(...)` in a content position throws `E12`. An interpolation count that does not match the number of slots throws `E11:<expected>:<got>`; a mismatch means the cached template for that call site was built from a different mix of interpolations. See [Errors](#errors).
 
 #### `text`
 
@@ -415,23 +415,23 @@ interface View<T = unknown, C extends CmdContext = any> {
   type: 'view';
   node: Node;
   bind?: Bind<T, C> | undefined;
-  childCommits?: Commit<unknown, CmdContext>[];
-  live?: () => Boundary | undefined;
+  cleanBinds: () => void;
+  boundary: () => Boundary;
+  children?: (AnyView | Patch)[];
 }
 
 type AnyView = View<any, any>;
 ```
 
-`View` is the unit returned by `html`, `text`, `view`, and `repeat`. Its `node` is a DOM node or `DocumentFragment`. `live` returns the boundary the view currently occupies; `render` calls it at disposal time so a view that swaps its own contents (`view`, `repeat`) is torn down from its current nodes.
+`View` is the unit returned by `html`, `text`, `view`, and `repeat`. Its `node` is a DOM node or `DocumentFragment`. `boundary` returns the nodes the view currently occupies; `render` calls it at disposal time so a view that swaps its own contents (`view`, `repeat`) is torn down from its current nodes. `cleanBinds` detaches the view's bindings and, recursively, those of its `children`.
 
-#### `extractBoundary` / `replaceWithView`
+#### `replaceWithView`
 
 ```ts
-const extractBoundary: (view: View) => Boundary;
 const replaceWithView: (old: Boundary, view: View) => Boundary;
 ```
 
-Helpers used by `view` and `repeat` to mount a view and later swap it. `extractBoundary` wraps `view.node` in a `Boundary`; `replaceWithView` replaces an existing boundary with the view's node and returns the new boundary.
+Helper used by `view` and `repeat` to swap a mounted view: replaces an existing boundary with the view's node and returns the new boundary.
 
 ### DOM bindings
 
@@ -635,7 +635,7 @@ render(() => html`<p>lazy</p>`, document.body);
 dispose();
 ```
 
-A view that swaps its own contents — one built with `view()` or `repeat()` at the root — disposes the nodes currently in `node`, not the ones originally appended. An empty template such as html`` renders nothing and its disposer is a no-op.
+A view that swaps its own contents — one built with `view()` or `repeat()` at the root — disposes the nodes currently in `node`, not the ones originally appended. An empty template such as html`` throws `E10`.
 
 ### Low-level API
 
@@ -658,7 +658,15 @@ An inclusive range of sibling nodes (`start` through `end`).
 const toBoundary: (node: Node) => Boundary;
 ```
 
-Wraps a node in a `Boundary`. For a `DocumentFragment`, the boundary spans its first and last child; otherwise it covers the node itself. Throws `toBoundary: empty fragment` on an empty fragment.
+Wraps a node in a `Boundary`. For a `DocumentFragment`, the boundary spans its first and last child; otherwise it covers the node itself. Throws `E2` on an empty fragment.
+
+#### `walkBoundary`
+
+```ts
+const walkBoundary: (b: Boundary, fn: (node: Node) => void) => void;
+```
+
+Visits every node from `b.start` through `b.end`. Callers capture the next sibling before mutating; `removeBoundary` and `repeat`'s reordering are built on it.
 
 #### `removeBoundary`
 
@@ -674,7 +682,7 @@ Removes every node in the boundary. A no-op if the boundary has no parent.
 const replaceWithNode: (old: Boundary, node: Node) => Boundary;
 ```
 
-Replaces an entire boundary with `node` and returns the new boundary. Throws if `old` has no parent. This is the primitive behind dynamic `view` and `repeat` swaps.
+Replaces an entire boundary with `node` and returns the new boundary. Throws `E3` if `old` has no parent. This is the primitive behind dynamic `view` and `repeat` swaps.
 
 #### `Cmd` / `AnyCmd` / `CmdContext`
 
@@ -689,18 +697,26 @@ type AnyCmd = Cmd<any, any>;
 
 A `Cmd` is the unit of work a binding runs: it receives the current signal value and its context.
 
-#### `Commit` / `cleanCommit`
+### Errors
 
-```ts
-interface Commit<T, C extends CmdContext> {
-  binds: Bind<T, C> | Bind<T, C>[] | undefined;
-  children?: Commit<unknown, CmdContext>[] | undefined;
-}
+Runtime errors carry a short code in `message` instead of a sentence, so the
+string tables stay out of the bundle. Codes with arguments are colon-separated.
+Look yours up here:
 
-const cleanCommit: (commit: Commit<unknown, CmdContext>) => void;
-```
-
-A `Commit` groups the bindings created by mounting a view; `cleanCommit` recursively removes them all. `View.childCommits` carries these so a parent can tear a whole subtree down at once.
+| Code | Thrown by | Meaning |
+| --- | --- | --- |
+| `E1:<index>` | `at` | Array index out of range. |
+| `E2` | `toBoundary` | Cannot build a boundary from an empty fragment. |
+| `E3` | `replaceWithNode` | The old boundary has no `parentNode`. |
+| `E4` | `patch` | A keyed command (`attr`, `style`, `toggleClass`, ...) was given no key. |
+| `E5` | `patch` | `act` was given no function. |
+| `E6` | `patch` | `on` was given no event type. |
+| `E7` | `repeat` | The rendered items have no parent node. |
+| `E8` | `repeat` | The temporary start/end fences were removed mid-update. |
+| `E9` | `repeat` | There is no node after the fence to move before. |
+| `E10` | `html` | The template is empty (an empty tagged template). |
+| `E11:<expected>:<got>` | `html` | Interpolation count does not match the template's slots. |
+| `E12` | `html` | Unmatched interpolation; `patch()` must be in attribute position. |
 
 ### Reactivity model
 

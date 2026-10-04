@@ -1,4 +1,4 @@
-import {type Boundary, replaceWithNode, toBoundary} from './boundary';
+import {type Boundary, replaceWithNode} from './boundary';
 import type {CmdContext} from './cmd';
 import type {Patch} from './patch';
 import {type Bind, createBind, removeBind, type Sig} from './sig.bind';
@@ -13,7 +13,6 @@ export interface View<T = unknown, C extends CmdContext = any> {
   cleanBinds: () => void;
   boundary: () => Boundary;
 
-  isCommited?: boolean;
   children?: ChildView[] | undefined;
 }
 
@@ -28,7 +27,6 @@ export interface ViewContext<T> extends CmdContext {
 const viewCmd = <T>(val: T, ctx: ViewContext<T>) => {
   const oldBoundary = ctx.inner.boundary();
   const newInner = ctx.viewFn(val);
-  if (!oldBoundary) throw new Error('empty boundary');
   replaceWithView(oldBoundary, newInner);
   ctx.inner.cleanBinds();
   ctx.inner = newInner;
@@ -59,8 +57,5 @@ export const view = <T>(
   };
 };
 
-export const extractBoundary = (view: View): Boundary => toBoundary(view.node);
-
-export const replaceWithView = (old: Boundary, view: View): Boundary => {
-  return replaceWithNode(old, view.node);
-};
+export const replaceWithView = (old: Boundary, view: View): Boundary =>
+  replaceWithNode(old, view.node);

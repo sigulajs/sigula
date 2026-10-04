@@ -59,8 +59,6 @@ describe('replaceWithNode', () => {
 
   it('throws when the old boundary has no parent', () => {
     const orphan = text('orphan');
-    expect(() => replaceWithNode(toBoundary(orphan), text('X'))).toThrow(
-      'replaceWithNode: old boundary has no parentNode',
-    );
+    expect(() => replaceWithNode(toBoundary(orphan), text('X'))).toThrow('E3');
   });
 });

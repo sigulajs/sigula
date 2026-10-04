@@ -1,6 +1,6 @@
-import type {Boundary} from './boundary';
 import type {Cmd, CmdContext} from './cmd';
-import type {AnyBind, Sig} from './sig.bind';
+import {err} from './err';
+import type {Sig} from './sig.bind';
 
 export interface PatchContext extends CmdContext {
   // kind: 'elem';
@@ -19,24 +19,17 @@ export type ToPatchItem<T> = (el: Element) => PatchItem<T>;
 export type AnyPatchItem = PatchItem<any>;
 export type ToAnyPatchItem = (el: Element) => AnyPatchItem;
 
-const _emptyFn = (): void => {};
-const _notImp = (): Boundary => {
-  throw new Error('not imp');
-};
+const _noop = (): void => {};
 export interface Patch {
   type: 'patch';
   toPatchItems: ToAnyPatchItem[];
-  isCommited?: boolean;
-  binds?: AnyBind[];
   cleanBinds: () => void;
-  boundary: () => Boundary;
 }
 
 export const patch = (...toPatchItems: ToAnyPatchItem[]): Patch => ({
   type: 'patch',
   toPatchItems,
-  cleanBinds: _emptyFn,
-  boundary: _notImp,
+  cleanBinds: _noop,
 });
 
 // Every patch item is the same shape -- bind `source` to `elem` plus whatever
@@ -56,7 +49,7 @@ const _toPatchItem =
 // most commands take their attribute/style/class name as the first extra
 const _key = (ctx: PatchContext): string => {
   const key = ctx.extra?.[0];
-  if (!key) throw new Error('patch: empty key');
+  if (!key) err('E4');
   return key as string;
 };
 
@@ -129,7 +122,7 @@ export type ActFn<T> = (node: Node, val?: T) => void;
 
 const actCmd = <T>(val: T, ctx: PatchContext) => {
   const fn = ctx.extra?.[0] as ActFn<T> | undefined;
-  if (!fn) throw new Error('patch: no function');
+  if (!fn) err('E5');
   fn(ctx.node, val);
 };
 
@@ -147,7 +140,7 @@ const onCmd = (listener: unknown, ctx: PatchContext) => {
     | boolean
     | AddEventListenerOptions
     | undefined;
-  if (!type) throw new Error('patch: no event type');
+  if (!type) err('E6');
   ctx.node.addEventListener(
     type,
     listener as EventListenerOrEventListenerObject,

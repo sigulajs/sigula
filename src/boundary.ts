@@ -1,25 +1,26 @@
+import {err} from './err';
+
 export interface Boundary {
   start: Node;
   end: Node;
 }
 
+// Visits every node from start through end. Callers capture nextSibling before
+// mutating, so the walk survives removals and moves.
+export const walkBoundary = (b: Boundary, fn: (node: Node) => void) => {
+  let n: Node | null = b.start;
+  while (n) {
+    const next: Node | null = n.nextSibling;
+    fn(n);
+    if (n === b.end) break;
+    n = next;
+  }
+};
+
 export const removeBoundary = (b: Boundary) => {
   const parent = b.start.parentNode;
-  if (!parent) {
-    return;
-  }
-
-  if (b.start === b.end) parent.removeChild(b.start);
-  else {
-    // walking siblings is faster than a Range
-    let n: Node | null = b.start;
-    while (n) {
-      const next: Node | null = n.nextSibling;
-      parent.removeChild(n);
-      if (n === b.end) break;
-      n = next;
-    }
-  }
+  if (!parent) return;
+  walkBoundary(b, (node) => parent.removeChild(node));
 };
 
 export const toBoundary = (node: Node): Boundary => {
@@ -27,15 +28,14 @@ export const toBoundary = (node: Node): Boundary => {
     node.nodeType === Node.DOCUMENT_FRAGMENT_NODE
       ? {start: node.firstChild, end: node.lastChild}
       : {start: node, end: node};
-  if (!b.start || !b.end) throw new Error('toBoundary: empty fragment');
+  if (!b.start || !b.end) err('E2');
   return b as Boundary;
 };
 
-export const replaceWithNode = (old: Boundary, node: Node) => {
+export const replaceWithNode = (old: Boundary, node: Node): Boundary => {
   const newBoundary = toBoundary(node);
   const parent = old.start.parentNode;
-  if (!parent)
-    throw new Error('replaceWithNode: old boundary has no parentNode');
+  if (!parent) err('E3');
 
   if (old.start === old.end) {
     parent.replaceChild(node, old.start);

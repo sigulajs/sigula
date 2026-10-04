@@ -151,26 +151,24 @@ describe('patch', () => {
   it('throws when the key is missing', () => {
     const node = document.createElement('div');
     const item = attr('x', 'k')(node);
-    expect(() => item.cmd('x', {node, extra: []})).toThrow('patch: empty key');
+    expect(() => item.cmd('x', {node, extra: []})).toThrow('E4');
   });
 
-  it('names itself consistently in its own errors', () => {
+  it('throws a coded error for a malformed command', () => {
     const node = document.createElement('div');
     expect(() => act('x', () => {})(node).cmd('x', {node, extra: []})).toThrow(
-      'patch: no function',
+      'E5',
     );
     expect(() =>
       on('click', () => {})(node).cmd(() => {}, {node, extra: []}),
-    ).toThrow('patch: no event type');
+    ).toThrow('E6');
   });
 
   it('throws when a patch is used in child position', () => {
     const s = sig('a');
     // the marker for a patch is an attribute token, so in child position it
     // renders as text and the command would silently never be bound
-    expect(() => html`<div>${patch(id(s))}</div>`).toThrow(
-      'html: unmatched interpolation; patch() must be in attribute position',
-    );
+    expect(() => html`<div>${patch(id(s))}</div>`).toThrow('E12');
   });
 
   it('binds correctly on a second render of the same template', async () => {

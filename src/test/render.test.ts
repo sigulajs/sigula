@@ -39,7 +39,7 @@ describe('render disposer', () => {
   it('renders and disposes an empty template with throwing', () => {
     const el = host();
 
-    expect(() => render(html``, el)).toThrow('html: empty');
+    expect(() => render(html``, el)).toThrow('E10');
   });
 
   it('renders a template that starts with an interpolation', async () => {

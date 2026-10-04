@@ -19,9 +19,7 @@ describe('html', () => {
     render(cell(false), document.body);
     expect(document.body.innerHTML).toBe('<td>-</td>');
 
-    expect(() => render(cell(true), document.body)).toThrow(
-      /patch\(\) must be in attribute position/,
-    );
+    expect(() => render(cell(true), document.body)).toThrow('E12');
   });
 
   it('renders a call site whose slots keep the same kind', async () => {
@@ -45,7 +43,7 @@ describe('html', () => {
     const strs = capture`<p>${text('x')}</p>`;
     document.body.innerHTML = '<i>seed</i>';
     expect(() => render(drive(strs) as never, document.body)).toThrow(
-      /expected 1 interpolation, got 0/,
+      'E11:1:0',
     );
     expect(document.body.innerHTML).toBe('<i>seed</i>');
   });
@@ -55,18 +53,18 @@ describe('html', () => {
     document.body.innerHTML = '<i>seed</i>';
     expect(() =>
       render(drive(strs, text('a'), text('b')) as never, document.body),
-    ).toThrow(/expected 1 interpolation, got 2/);
+    ).toThrow('E11:1:2');
     expect(document.body.innerHTML).toBe('<i>seed</i>');
   });
 
-  it('pluralises the expected count when a template has several slots', () => {
+  it('encodes the expected and actual counts in the error code', () => {
     const strs = capture`<p>${text('x')}</p><p>${text('y')}</p>`;
     expect(() =>
       render(
         drive(strs, text('a'), text('b'), text('c')) as never,
         document.body,
       ),
-    ).toThrow(/expected 2 interpolations, got 3/);
+    ).toThrow('E11:2:3');
   });
 
   it('renders a template with more than 31 interpolations', () => {
