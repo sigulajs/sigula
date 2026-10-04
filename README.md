@@ -11,7 +11,7 @@ A minimal, signal-based web framework with fine-grained reactivity. No virtual D
 - No virtual DOM — no diffing, no VNodes. Direct real DOM operations with minimal runtime overhead
 - Minimal HTML templates — based on native string templates. No custom compiler, no DSL — just JavaScript strings
 - Batched, coalesced updates — writes are queued in a microtask, so a signal touched many times before the flush runs its bindings once, with the final value
-- Ultra small — ~4.1KB minified + gzipped
+- Ultra small — ~4.0KB minified + gzipped
 - TypeScript friendly — full type inference for signals and template bindings
 - Simple but performant — tiny API surface, low mental overhead, no compromise on performance
 
@@ -231,7 +231,7 @@ const App: View = html`
 
 ### Ultra small
 
-minified + gzipped: ~4.1KB
+minified + gzipped: ~4.0KB
 
 ## 📖 Reference
 
@@ -243,6 +243,7 @@ All exports are named exports from `sigula`.
 - [Control flow](#control-flow)
 - [Rendering](#rendering)
 - [Low-level API](#low-level-api)
+- [Errors](#errors)
 - [Reactivity model](#reactivity-model)
 
 ### Reactivity
@@ -273,7 +274,7 @@ The core reactive value.
 | `trans` | `(fn: (v: T) => T): void` | Applies `fn` to the current value via `update`, so an equal result is skipped. |
 | `equals` | `(other: unknown): boolean` | `Equatable` implementation; two `Sig`s are equal when their values are deeply equal. |
 | `addBind` | `<C>(bind: Bind<T, C>): void` | Registers a binding. Prefer `createBind` / the `patch`/`text`/`view` APIs. |
-| `removeBind` | `(bind: Bind<T, CmdContext>): void` | Unregisters a binding; runs `cleanup()` when the last one goes away. |
+| `removeBind` | `<C>(bind: Bind<T, C>): void` | Unregisters a binding; runs `cleanup()` when the last one goes away. |
 | `getBinds` | `(): Bind<T, CmdContext>[]` | Returns the current bindings. |
 | `cleanup` | `(): void` | Overridable hook called when a signal loses all bindings. No-op on `Sig`. |
 
@@ -356,7 +357,7 @@ const createBind: <T, C extends CmdContext>(
   cmd: Cmd<T, C>,
 ) => Bind<T, C>;
 
-const removeBind: (bind: Bind<unknown, CmdContext>) => void;
+const removeBind: <T, C extends CmdContext>(bind: Bind<T, C>) => void;
 ```
 
 Low-level bind management. `createBind` wires `cmd(sig.get(), context)` to run whenever `sig` changes; `removeBind` detaches it. `Bind` is the resulting record:
@@ -571,10 +572,11 @@ type ToAnyPatchItem = (el: Element) => AnyPatchItem;
 interface Patch {
   type: 'patch';
   toPatchItems: ToAnyPatchItem[];
+  cleanBinds: () => void;
 }
 ```
 
-`ToPatchItem` defers reading the target element until mount. `patch` collects these factories into a single `Patch`.
+`ToPatchItem` defers reading the target element until mount. `patch` collects these factories into a single `Patch`; `cleanBinds` detaches the bindings created when the patch was committed to an element.
 
 ### Control flow
 
@@ -635,7 +637,7 @@ render(() => html`<p>lazy</p>`, document.body);
 dispose();
 ```
 
-A view that swaps its own contents — one built with `view()` or `repeat()` at the root — disposes the nodes currently in `node`, not the ones originally appended. An empty template such as html`` throws `E10`.
+A view that swaps its own contents — one built with `view()` or `repeat()` at the root — disposes the nodes currently in `node`, not the ones originally appended. An empty tagged template throws `E10`.
 
 ### Low-level API
 
@@ -708,7 +710,7 @@ Look yours up here:
 | `E1:<index>` | `at` | Array index out of range. |
 | `E2` | `toBoundary` | Cannot build a boundary from an empty fragment. |
 | `E3` | `replaceWithNode` | The old boundary has no `parentNode`. |
-| `E4` | `patch` | A keyed command (`attr`, `style`, `toggleClass`, ...) was given no key. |
+| `E4` | `patch` | A keyed command (`attr`, `style`, `styleProperty`, `toggleClass`) was given no key. |
 | `E5` | `patch` | `act` was given no function. |
 | `E6` | `patch` | `on` was given no event type. |
 | `E7` | `repeat` | The rendered items have no parent node. |
