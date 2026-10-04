@@ -65,10 +65,6 @@ const _isView = (item: Comment) => item.data.trim() === MARK;
 const commitView = <T, C extends CmdContext>(view: View<T, C>, node: Node) => {
   (node as Comment).replaceWith(view.node);
   view.isCommited = true;
-  //return {
-  //  binds: view.bind,
-  //  children: view.childCommits,
-  //};
 };
 
 const commitPatch = (patch: Patch, node: Node) => {
@@ -92,8 +88,6 @@ const commitPatch = (patch: Patch, node: Node) => {
     });
   };
   patch.boundary = () => ({start: node, end: node});
-
-  // return {binds};
 };
 
 // Both template passes walk the same tree hunting for the next interpolation
@@ -131,7 +125,7 @@ export const html = (
   strs: TemplateStringsArray,
   ...items: (Patch | AnyView)[]
 ): View => {
-  if (!strs?.[0]) {
+  if (strs.length <= 1 && !strs?.[0]) {
     throw new Error('html: empty');
   }
   // const frag = document.createDocumentFragment();
@@ -187,10 +181,8 @@ export const html = (
   // const commits: Commit<unknown>[] = [];
   wraps.forEach(({item, node}) => {
     if (item.type === 'patch') {
-      // commits.push(commitPatch(item, node));
       commitPatch(item, node);
     } else if (item.type === 'view') {
-      // commits.push(commitView(item, node));
       commitView(item, node);
     }
   });

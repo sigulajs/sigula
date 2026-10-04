@@ -42,6 +42,25 @@ describe('render disposer', () => {
     expect(() => render(html``, el)).toThrow('html: empty');
   });
 
+  it('renders a template that starts with an interpolation', async () => {
+    const flip = sig(false);
+    const el = host();
+
+    const dispose = render(
+      html`${view(flip, (v) => (v ? html`<b>dark</b>` : html`<b>light</b>`))}`,
+      el,
+    );
+    expect(el.innerHTML).toBe('<b>light</b>');
+
+    flip.update(true);
+    await Promise.resolve();
+    expect(el.innerHTML).toBe('<b>dark</b>');
+
+    dispose();
+    expect(el.innerHTML).toBe('');
+    expect(flip.getBinds().length).toBe(0);
+  });
+
   it('works with the thunk form', () => {
     const source = sig(1);
     const el = host();
