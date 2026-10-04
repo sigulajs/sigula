@@ -1,5 +1,5 @@
 import {describe, expect, it, vi} from 'vitest';
-import {compute, createBind, removeBind, sig} from '..';
+import {compute, createBind, html, removeBind, render, sig, text, view} from '..';
 
 const flush = async () => {
   await Promise.resolve();
@@ -230,5 +230,48 @@ describe('DerivedSig re-arm', () => {
 
     doubled.cleanup();
     expect(source.getBinds().length).toBe(0);
+  });
+});
+
+describe('DerivedSig re-arm', () => {
+  it('recomputes once when a multi-source derived signal is re-observed', async () => {
+    const sources: Record<string, ReturnType<typeof sig<number>>> = {
+      a: sig(1),
+      b: sig(2),
+      c: sig(3),
+    };
+
+    let calls = 0;
+    const sum = compute(sources, (v) => {
+      calls++;
+      return (v.a as number) + (v.b as number) + (v.c as number);
+    });
+
+    const show = sig(true);
+    const mount = () =>
+      render(
+        html`<p>${view(show, (v) => (v ? text(sum) : text('off')))}</p>`,
+        document.body,
+      );
+
+    const dispose = mount();
+    const callsAfterMount = calls;
+
+    // hiding the subtree removes the last observer, which unlinks the
+    // derived signal from its sources
+    show.update(false);
+    await flush();
+    expect(document.body.innerHTML).toBe('<p>off</p>');
+
+    // re-showing it re-arms the links
+    calls = 0;
+    show.update(true);
+    await flush();
+
+    expect(document.body.innerHTML).toBe('<p>6</p>');
+    expect(calls).toBe(1);
+    expect(callsAfterMount).toBeGreaterThan(0);
+
+    dispose();
   });
 });

@@ -147,11 +147,11 @@ export class DerivedSig<T> extends Sig<T> {
     super.addBind(bind);
     if (this._linked) return;
     this._linked = true;
-    this._fromBinds = this._fromBinds.map((f) => {
-      const fresh = createBind(f.sig, f.context, f.cmd);
-      fresh.cmd(fresh.sig.get(), fresh.context);
-      return fresh;
-    });
+    this._fromBinds = this._fromBinds.map((f) =>
+      createBind(f.sig, f.context, f.cmd),
+    );
+    const first = this._fromBinds[0];
+    if (first) first.cmd(first.sig.get(), first.context);
   }
 
   override cleanup() {
