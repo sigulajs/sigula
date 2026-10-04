@@ -3,7 +3,6 @@ import {err} from './err';
 import type {Sig} from './sig.bind';
 
 export interface PatchContext extends CmdContext {
-  // kind: 'elem';
   node: Node;
   extra?: unknown[];
 }
