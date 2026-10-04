@@ -36,12 +36,10 @@ describe('render disposer', () => {
     expect(source.getBinds().length).toBe(0);
   });
 
-  it('renders and disposes an empty template without throwing', () => {
+  it('renders and disposes an empty template with throwing', () => {
     const el = host();
 
-    const dispose = render(html``, el);
-    expect(el.innerHTML).toBe('');
-    expect(() => dispose()).not.toThrow();
+    expect(() => render(html``, el)).toThrow('html: empty');
   });
 
   it('works with the thunk form', () => {

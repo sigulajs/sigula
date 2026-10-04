@@ -1,5 +1,5 @@
 import type {PatchContext} from './patch';
-import {createBind, Sig} from './sig.bind';
+import {createBind, removeBind, Sig} from './sig.bind';
 import type {View} from './view';
 
 const textCmd = <T>(val: T, ctx: PatchContext) => {
@@ -17,5 +17,9 @@ export const text = <T>(source: T | Sig<T>): View<T, PatchContext> => {
     type: 'view',
     node: text,
     bind,
+    boundary: () => ({start: text, end: text}),
+    cleanBinds: () => {
+      if (bind) removeBind(bind);
+    },
   };
 };

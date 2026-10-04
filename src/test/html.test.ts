@@ -19,7 +19,7 @@ describe('html', () => {
     render(cell(false), document.body);
     expect(document.body.innerHTML).toBe('<td>-</td>');
 
-    expect(() => render(cell(true), document.body)).toThrowError(
+    expect(() => render(cell(true), document.body)).toThrow(
       /patch\(\) must be in attribute position/,
     );
   });
@@ -44,7 +44,7 @@ describe('html', () => {
   it('rejects too few interpolations for the template', () => {
     const strs = capture`<p>${text('x')}</p>`;
     document.body.innerHTML = '<i>seed</i>';
-    expect(() => render(drive(strs) as never, document.body)).toThrowError(
+    expect(() => render(drive(strs) as never, document.body)).toThrow(
       /expected 1 interpolation, got 0/,
     );
     expect(document.body.innerHTML).toBe('<i>seed</i>');
@@ -55,7 +55,7 @@ describe('html', () => {
     document.body.innerHTML = '<i>seed</i>';
     expect(() =>
       render(drive(strs, text('a'), text('b')) as never, document.body),
-    ).toThrowError(/expected 1 interpolation, got 2/);
+    ).toThrow(/expected 1 interpolation, got 2/);
     expect(document.body.innerHTML).toBe('<i>seed</i>');
   });
 
@@ -66,7 +66,7 @@ describe('html', () => {
         drive(strs, text('a'), text('b'), text('c')) as never,
         document.body,
       ),
-    ).toThrowError(/expected 2 interpolations, got 3/);
+    ).toThrow(/expected 2 interpolations, got 3/);
   });
 
   it('renders a template with more than 31 interpolations', () => {

@@ -1,5 +1,6 @@
+import type {Boundary} from './boundary';
 import type {Cmd, CmdContext} from './cmd';
-import type {Sig} from './sig.bind';
+import type {AnyBind, Sig} from './sig.bind';
 
 export interface PatchContext extends CmdContext {
   // kind: 'elem';
@@ -18,14 +19,24 @@ export type ToPatchItem<T> = (el: Element) => PatchItem<T>;
 export type AnyPatchItem = PatchItem<any>;
 export type ToAnyPatchItem = (el: Element) => AnyPatchItem;
 
+const _emptyFn = (): void => {};
+const _notImp = (): Boundary => {
+  throw new Error('not imp');
+};
 export interface Patch {
   type: 'patch';
   toPatchItems: ToAnyPatchItem[];
+  isCommited?: boolean;
+  binds?: AnyBind[];
+  cleanBinds: () => void;
+  boundary: () => Boundary;
 }
 
 export const patch = (...toPatchItems: ToAnyPatchItem[]): Patch => ({
   type: 'patch',
   toPatchItems,
+  cleanBinds: _emptyFn,
+  boundary: _notImp,
 });
 
 // Every patch item is the same shape -- bind `source` to `elem` plus whatever

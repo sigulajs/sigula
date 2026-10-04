@@ -1,6 +1,5 @@
 export * from './boundary';
 export * from './cmd';
-export * from './commit';
 export * from './compute';
 export * from './eq';
 export * from './html';

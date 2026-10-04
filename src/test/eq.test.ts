@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
-import {html, render, sig, text} from '..';
 import {isEqual} from '#/eq.js';
+import {html, render, sig, text} from '..';
 
 describe('isEqual', () => {
   describe('pinned current behaviour', () => {
@@ -52,9 +52,7 @@ describe('isEqual', () => {
 
     it('recurses through nested structures', () => {
       expect(isEqual({a: {b: [1, {c: 2}]}}, {a: {b: [1, {c: 2}]}})).toBe(true);
-      expect(isEqual({a: {b: [1, {c: 2}]}}, {a: {b: [1, {c: 3}]}})).toBe(
-        false,
-      );
+      expect(isEqual({a: {b: [1, {c: 2}]}}, {a: {b: [1, {c: 3}]}})).toBe(false);
     });
 
     it('compares null-prototype objects', () => {
@@ -81,7 +79,15 @@ describe('isEqual', () => {
       expect(isEqual(new Map([[1, 2]]), new Map([[1, 2]]))).toBe(true);
       expect(isEqual(new Map([[1, 2]]), new Map([[1, 3]]))).toBe(false);
       expect(isEqual(new Map([[1, 2]]), new Map([[2, 1]]))).toBe(false);
-      expect(isEqual(new Map([[1, 2]]), new Map([[1, 2], [3, 4]]))).toBe(false);
+      expect(
+        isEqual(
+          new Map([[1, 2]]),
+          new Map([
+            [1, 2],
+            [3, 4],
+          ]),
+        ),
+      ).toBe(false);
     });
 
     it('compares Set order-sensitively', () => {
@@ -156,10 +162,22 @@ describe('isEqual', () => {
       ['array vs object', [], {}],
       ['array vs array-like', [1, 2], {0: 1, 1: 2}],
       ['array vs typed array', [1, 2], new Uint8Array([1, 2])],
-      ['null-prototype vs object', Object.assign(Object.create(null), {a: 1}), {a: 1}],
+      [
+        'null-prototype vs object',
+        Object.assign(Object.create(null), {a: 1}),
+        {a: 1},
+      ],
       ['class instance vs object', new (class {})(), {}],
       ['class instance vs array', new (class {})(), []],
-      ['two classes, same shape', new (class { x = 1 })(), new (class { x = 1 })()],
+      [
+        'two classes, same shape',
+        new (class {
+          x = 1;
+        })(),
+        new (class {
+          x = 1;
+        })(),
+      ],
       ['custom prototype vs object', Object.create({}), {}],
     ];
 

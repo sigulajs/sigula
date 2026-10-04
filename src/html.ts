@@ -1,8 +1,7 @@
 import {toBoundary} from './boundary';
 import type {CmdContext} from './cmd';
-import type {Commit} from './commit';
 import type {Patch, PatchContext} from './patch';
-import {type Bind, createBind, Sig} from './sig.bind';
+import {type Bind, createBind, removeBind, Sig} from './sig.bind';
 import {at} from './utils';
 import type {AnyView, View} from './view';
 
@@ -63,21 +62,16 @@ const _hasMark = (el: Element) => el.hasAttribute(MARK);
 const _rmMark = (el: Element) => el.removeAttribute(MARK);
 const _isView = (item: Comment) => item.data.trim() === MARK;
 
-const commitView = <T, C extends CmdContext>(
-  view: View<T, C>,
-  node: Node,
-): Commit<T, C> => {
+const commitView = <T, C extends CmdContext>(view: View<T, C>, node: Node) => {
   (node as Comment).replaceWith(view.node);
-  return {
-    binds: view.bind,
-    children: view.childCommits,
-  };
+  view.isCommited = true;
+  //return {
+  //  binds: view.bind,
+  //  children: view.childCommits,
+  //};
 };
 
-const commitPatch = (
-  patch: Patch,
-  node: Node,
-): Commit<unknown, PatchContext> => {
+const commitPatch = (patch: Patch, node: Node) => {
   const binds: Bind<unknown, PatchContext>[] = [];
   patch.toPatchItems.forEach((toPatchItem) => {
     const item = toPatchItem(node as Element);
@@ -90,7 +84,16 @@ const commitPatch = (
     }
   });
 
-  return {binds};
+  patch.isCommited = true;
+  patch.binds = binds;
+  patch.cleanBinds = () => {
+    binds.forEach((b) => {
+      removeBind(b);
+    });
+  };
+  patch.boundary = () => ({start: node, end: node});
+
+  // return {binds};
 };
 
 // Both template passes walk the same tree hunting for the next interpolation
@@ -128,6 +131,9 @@ export const html = (
   strs: TemplateStringsArray,
   ...items: (Patch | AnyView)[]
 ): View => {
+  if (!strs?.[0]) {
+    throw new Error('html: empty');
+  }
   // const frag = document.createDocumentFragment();
   const slots = strs.length - 1;
   if (items.length !== slots) {
@@ -178,22 +184,43 @@ export const html = (
       'html: unmatched interpolation; patch() must be in attribute position',
     );
 
-  const commits: Commit<unknown>[] = [];
+  // const commits: Commit<unknown>[] = [];
   wraps.forEach(({item, node}) => {
     if (item.type === 'patch') {
-      commits.push(commitPatch(item, node));
+      // commits.push(commitPatch(item, node));
+      commitPatch(item, node);
     } else if (item.type === 'view') {
-      commits.push(commitView(item, node));
+      // commits.push(commitView(item, node));
+      commitView(item, node);
     }
   });
+  const children = wraps.map((w) => w.item);
 
   const boundary = frag.firstChild ? toBoundary(frag) : undefined;
+  if (!boundary) throw new Error('html: empty boundary'); // impossible
 
   return {
     type: 'view',
     node: frag,
-    childCommits: commits,
-    live: () => boundary,
+    children,
+    boundary: () => {
+      if (boundary) {
+        const last = strs.length - 1;
+        if (!strs[0]) {
+          const newStart = children[0]?.boundary().start;
+          if (newStart) boundary.start = newStart;
+        }
+        if (!strs[last]) {
+          const newEnd = children[last - 1]?.boundary().end;
+          if (newEnd) boundary.end = newEnd;
+        }
+      }
+      return boundary;
+    },
+    cleanBinds: () =>
+      children.forEach((child) => {
+        child.cleanBinds();
+      }),
   };
 };
 

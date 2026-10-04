@@ -1,66 +1,61 @@
 import {type Boundary, replaceWithNode, toBoundary} from './boundary';
 import type {CmdContext} from './cmd';
-import {type Commit, cleanCommit} from './commit';
-import {
-  type AnyBind,
-  type Bind,
-  createBind,
-  removeBind,
-  type Sig,
-} from './sig.bind';
+import type {Patch} from './patch';
+import {type Bind, createBind, removeBind, type Sig} from './sig.bind';
+
+export type ChildView = AnyView | Patch;
 
 // biome-ignore lint/suspicious/noExplicitAny: View with any context
 export interface View<T = unknown, C extends CmdContext = any> {
   type: 'view';
   node: Node;
   bind?: Bind<T, C> | undefined;
-  childCommits?: Commit<unknown, CmdContext>[];
-  live?: () => Boundary | undefined;
+  cleanBinds: () => void;
+  boundary: () => Boundary;
+
+  isCommited?: boolean;
+  children?: ChildView[] | undefined;
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: any view
 export type AnyView = View<any, any>;
 
 export interface ViewContext<T> extends CmdContext {
-  boundary: Boundary;
-  bind?: AnyBind | undefined;
-  childCommits?: Commit<unknown, CmdContext>[] | undefined;
-  viewFn: (val: T) => View;
+  inner: AnyView;
+  viewFn: (val: T) => AnyView;
 }
 
 const viewCmd = <T>(val: T, ctx: ViewContext<T>) => {
-  const view = ctx.viewFn(val);
-  const newBoundary = replaceWithView(ctx.boundary, view);
-  if (ctx.bind) removeBind(ctx.bind);
-  ctx.childCommits?.forEach((commit) => {
-    cleanCommit(commit);
-  });
-  ctx.boundary = newBoundary;
-  ctx.bind = view.bind;
-  ctx.childCommits = view.childCommits;
+  const oldBoundary = ctx.inner.boundary();
+  const newInner = ctx.viewFn(val);
+  if (!oldBoundary) throw new Error('empty boundary');
+  replaceWithView(oldBoundary, newInner);
+  ctx.inner.cleanBinds();
+  ctx.inner = newInner;
 };
 
 export const view = <T>(
   sig: Sig<T>,
   viewFn: (val: T) => AnyView,
 ): View<T, ViewContext<T>> => {
-  const view = viewFn(sig.get());
-
-  const boundary = extractBoundary(view);
+  const inner = viewFn(sig.get());
 
   const ctx: ViewContext<T> = {
-    boundary,
-    bind: view.bind,
+    inner,
     viewFn,
-    childCommits: view.childCommits,
   };
 
   const bind = createBind(sig, ctx, viewCmd);
 
   return {
-    ...view,
+    type: 'view',
+    node: inner.node,
     bind,
-    live: () => ctx.boundary,
+    boundary: () => ctx.inner.boundary(),
+    cleanBinds: () => {
+      removeBind(bind);
+      ctx.inner.cleanBinds();
+    },
   };
 };
 

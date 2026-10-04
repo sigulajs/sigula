@@ -5,16 +5,10 @@ import {
   toBoundary,
 } from './boundary';
 import type {CmdContext} from './cmd';
-import {type Commit, cleanCommit} from './commit';
 import {isEqual} from './eq';
-import {type AnyBind, createBind, removeBind, type Sig} from './sig.bind';
+import {createBind, removeBind, type Sig} from './sig.bind';
 import {at} from './utils';
-import {
-  type AnyView,
-  extractBoundary,
-  replaceWithView,
-  type View,
-} from './view';
+import {type AnyView, replaceWithView, type View} from './view';
 
 export type RepeatProp<T> = {
   key: (item: T) => string;
@@ -29,11 +23,9 @@ interface Container {
 }
 
 interface Track<T> {
-  boundary: Boundary;
-  bind?: AnyBind | undefined;
-  item: T;
   key: string;
-  childCommits?: Commit<unknown, CmdContext>[] | undefined;
+  item: T;
+  view: AnyView;
   checked?: boolean;
   cleaned?: boolean;
 }
@@ -45,11 +37,8 @@ export interface RepeatContext<T> extends CmdContext {
 }
 
 const _cleanTrack = <T>(track: Track<T>) => {
-  removeBoundary(track.boundary);
-  if (track.bind) removeBind(track.bind);
-  track.childCommits?.forEach((commit) => {
-    cleanCommit(commit);
-  });
+  removeBoundary(track.view.boundary());
+  track.view.cleanBinds();
   track.cleaned = true;
 };
 
@@ -68,7 +57,6 @@ const repeatCmd = <T>(items: T[], ctx: RepeatContext<T>) => {
     const newFrag = _init(items, ctx.prop, newTracks);
     const newBoundary = replaceWithNode(ctx.boundary, newFrag);
     ctx.boundary = newBoundary;
-    // ctx.tracks.forEach(_cleanTrack);
     ctx.tracks = newTracks;
     return;
   }
@@ -286,9 +274,9 @@ const _generateMap = (list: unknown[], start: number, end: number) => {
 };
 
 const _beforeFence = <T>(container: Container, track?: Track<T>): Node =>
-  track ? track.boundary.start : container.endFence;
+  track ? track.view.boundary().start : container.endFence;
 const _afterFence = <T>(container: Container, track?: Track<T>): Node => {
-  const node = track ? track.boundary.end : container.startFence;
+  const node = track ? track.view.boundary().end : container.startFence;
   if (!node.nextSibling) throw new Error('no after fence');
   return node.nextSibling;
 };
@@ -301,14 +289,15 @@ const _mvNodeBefore = (parent: ParentNode, node: Node, child: Node | null) => {
 const _moveTrack = <T>(container: Container, track: Track<T>, fence: Node) => {
   const parent = container.parent;
 
-  if (track.boundary.start === track.boundary.end)
-    _mvNodeBefore(parent, track.boundary.start, fence);
+  const trackBoundary = track.view.boundary();
+  if (trackBoundary.start === trackBoundary.end)
+    _mvNodeBefore(parent, trackBoundary.start, fence);
   else {
-    let n: Node | null = track.boundary.start;
+    let n: Node | null = trackBoundary.start;
     while (n) {
       const next: Node | null = n.nextSibling;
       _mvNodeBefore(parent, n, fence);
-      if (n === track.boundary.end) break;
+      if (n === trackBoundary.end) break;
       n = next;
     }
   }
@@ -321,14 +310,15 @@ const _insertNewTrack = <T>(
   fence: Node,
 ): Track<T> => {
   const view = prop.view(item);
-  const boundary = extractBoundary(view);
+  // const boundary = extractBoundary(view);
   container.parent.insertBefore(view.node, fence);
   return {
     key: prop.key(item),
-    boundary,
-    bind: view.bind,
-    childCommits: view.childCommits,
     item,
+    view,
+    // boundary,
+    // bind: view.bind,
+    // childCommits: view.childCommits,
   };
 };
 
@@ -346,16 +336,15 @@ const _setTrack = <T>(
     };
   }
 
+  const oldBoundary = old.view.boundary();
   const view = prop.view(item);
-  const newBoundary = replaceWithView(old.boundary, view);
+  replaceWithView(oldBoundary, view);
   _cleanTrack(old);
 
   const newTrack: Track<T> = {
     key: prop.key(item),
-    boundary: newBoundary,
-    bind: view.bind,
-    childCommits: view.childCommits,
     item,
+    view,
   };
 
   return newTrack;
@@ -371,13 +360,11 @@ const _init = <T>(
     const view = prop.view(item);
     const key = prop.key(item);
 
-    const boundary = extractBoundary(view);
+    // const boundary = extractBoundary(view);
     tracks.push({
       key,
-      boundary,
-      bind: view.bind,
       item,
-      childCommits: view.childCommits,
+      view,
     });
     frag.appendChild(view.node);
   });
@@ -402,6 +389,12 @@ export const repeat = <T>(
     type: 'view',
     node: frag,
     bind,
-    live: () => ctx.boundary,
+    boundary: () => ctx.boundary,
+    cleanBinds: () => {
+      removeBind(bind);
+      ctx.tracks.forEach((t) => {
+        t.view.cleanBinds();
+      });
+    },
   };
 };
