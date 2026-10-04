@@ -38,7 +38,7 @@ interface Track<T> {
   cleaned?: boolean;
 }
 
-interface RepeatContext<T> extends CmdContext {
+export interface RepeatContext<T> extends CmdContext {
   prop: RepeatProp<T>;
   boundary: Boundary;
   tracks: Track<T>[];

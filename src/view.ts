@@ -21,7 +21,7 @@ export interface View<T = unknown, C extends CmdContext = any> {
 // biome-ignore lint/suspicious/noExplicitAny: any view
 export type AnyView = View<any, any>;
 
-interface ViewContext<T> extends CmdContext {
+export interface ViewContext<T> extends CmdContext {
   boundary: Boundary;
   bind?: AnyBind | undefined;
   childCommits?: Commit<unknown, CmdContext>[] | undefined;

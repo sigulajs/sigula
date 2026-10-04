@@ -42,19 +42,17 @@ class Queue {
     this.running = true;
     try {
       while (this.head < this._binds.length) {
-        const bind = this._binds[this.head++];
-        if (bind) {
-          try {
-            const {removed, sig, context, cmd} = bind;
-            if (!removed) cmd(sig.get(), context);
-          } catch (err) {
-            console.error('[Queue] task failed:', err, bind);
-          } finally {
-            // re-arm after running: cmd reads sig.get() at call time, so a bind
-            // that runs after a write already sees the newest value and must
-            // not re-run, while one that ran before it has to be queued again
-            bind.queued = false;
-          }
+        const bind = this._binds[this.head++]!;
+        try {
+          const {removed, sig, context, cmd} = bind;
+          if (!removed) cmd(sig.get(), context);
+        } catch (err) {
+          console.error('[Queue] task failed:', err, bind);
+        } finally {
+          // re-arm after running: cmd reads sig.get() at call time, so a bind
+          // that runs after a write already sees the newest value and must
+          // not re-run, while one that ran before it has to be queued again
+          bind.queued = false;
         }
       }
     } finally {
@@ -147,9 +145,12 @@ export class DerivedSig<T> extends Sig<T> {
     super.addBind(bind);
     if (this._linked) return;
     this._linked = true;
-    this._fromBinds = this._fromBinds.map((f) =>
-      createBind(f.sig, f.context, f.cmd),
-    );
+    for (let i = 0; i < this._fromBinds.length; i++) {
+      const f = this._fromBinds[i]!;
+      this._fromBinds[i] = createBind(f.sig, f.context, f.cmd);
+    }
+    // every from-bind shares one context whose cmd reads all sources, so one
+    // invocation recomputes the whole derived value
     const first = this._fromBinds[0];
     if (first) first.cmd(first.sig.get(), first.context);
   }

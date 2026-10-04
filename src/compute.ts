@@ -10,17 +10,8 @@ export type ValRecord<K extends SigRecord> = {
   [P in keyof K]: K[P] extends Sig<infer U> ? U : never;
 };
 
-const toValRecord = <S extends SigRecord>(source: S): ValRecord<S> => {
-  const keys = Object.keys(source);
-  const vals: Record<string, unknown> = {};
-  for (let i = 0; i < keys.length; i++) {
-    const k = keys[i];
-    if (k && source[k]) {
-      vals[k] = source[k].get();
-    }
-  }
-  return vals as ValRecord<S>;
-};
+// biome-ignore lint/suspicious/noExplicitAny: heterogeneous source sigs
+type ComputeEntry = [string, Sig<any>];
 
 interface ComputeContext<S, T> extends CmdContext {
   target: Sig<T>;
@@ -28,31 +19,28 @@ interface ComputeContext<S, T> extends CmdContext {
 }
 
 interface ComputeRecordContext<S extends SigRecord, T> extends CmdContext {
-  source: S;
   target: Sig<T>;
   fn: (v: ValRecord<S>) => T;
+  entries: ComputeEntry[];
 }
 
 const computeCmd = <S, T>(s: S, ctx: ComputeContext<S, T>) => {
-  const res = ctx.fn(s);
-  ctx.target.update(res);
+  ctx.target.update(ctx.fn(s));
 };
 
 const computeRecordCmd = <S extends SigRecord, T>(
   _s: unknown,
   ctx: ComputeRecordContext<S, T>,
 ) => {
-  const vals = toValRecord(ctx.source);
-  const res = ctx.fn(vals);
-  ctx.target.update(res);
+  const vals: Record<string, unknown> = {};
+  for (const [k, s] of ctx.entries) vals[k] = s.get();
+  ctx.target.update(ctx.fn(vals as ValRecord<S>));
 };
 
 const _compute = <S, T>(source: Sig<S>, fn: (v: S) => T): DerivedSig<T> => {
-  const output = fn(source.get());
-  const target = new DerivedSig(output);
+  const target = new DerivedSig(fn(source.get()));
   const ctx: ComputeContext<S, T> = {target, fn};
-  const bind = createBind(source, ctx, computeCmd);
-  target.addFromBind(bind);
+  target.addFromBind(createBind(source, ctx, computeCmd));
   return target;
 };
 
@@ -60,19 +48,19 @@ const _computeRecord = <S extends SigRecord, T>(
   source: S,
   fn: (v: ValRecord<S>) => T,
 ): DerivedSig<T> => {
-  const vals = toValRecord(source);
-  const res = fn(vals);
-  const target = new DerivedSig(res);
+  const entries: ComputeEntry[] = [];
+  const vals: Record<string, unknown> = {};
+  for (const [k, s] of Object.entries(source)) {
+    if (!k || !s) continue;
+    entries.push([k, s]);
+    vals[k] = s.get();
+  }
 
-  const ctx: ComputeRecordContext<S, T> = {source, target, fn};
+  const target = new DerivedSig(fn(vals as ValRecord<S>));
+  const ctx: ComputeRecordContext<S, T> = {target, fn, entries};
 
-  const keys = Object.keys(source);
-  for (let i = 0; i < keys.length; i++) {
-    const k = keys[i];
-    if (k && source[k]) {
-      const bind = createBind(source[k], ctx, computeRecordCmd);
-      target.addFromBind(bind);
-    }
+  for (const entry of entries) {
+    target.addFromBind(createBind(entry[1], ctx, computeRecordCmd));
   }
 
   return target;

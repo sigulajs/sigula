@@ -231,20 +231,14 @@ describe('DerivedSig re-arm', () => {
     doubled.cleanup();
     expect(source.getBinds().length).toBe(0);
   });
-});
 
-describe('DerivedSig re-arm', () => {
   it('recomputes once when a multi-source derived signal is re-observed', async () => {
-    const sources: Record<string, ReturnType<typeof sig<number>>> = {
-      a: sig(1),
-      b: sig(2),
-      c: sig(3),
-    };
+    const sources = {a: sig(1), b: sig(2), c: sig(3)};
 
     let calls = 0;
     const sum = compute(sources, (v) => {
       calls++;
-      return (v.a as number) + (v.b as number) + (v.c as number);
+      return v.a + v.b + v.c;
     });
 
     const show = sig(true);

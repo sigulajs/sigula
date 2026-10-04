@@ -11,7 +11,7 @@ A minimal, signal-based web framework with fine-grained reactivity. No virtual D
 - No virtual DOM — no diffing, no VNodes. Direct real DOM operations with minimal runtime overhead
 - Minimal HTML templates — based on native string templates. No custom compiler, no DSL — just JavaScript strings
 - Batched, coalesced updates — writes are queued in a microtask, so a signal touched many times before the flush runs its bindings once, with the final value
-- Ultra small — under ~4KB minified + gzipped
+- Ultra small — ~4.1KB minified + gzipped
 - TypeScript friendly — full type inference for signals and template bindings
 - Simple but performant — tiny API surface, low mental overhead, no compromise on performance
 
@@ -231,7 +231,7 @@ const App: View = html`
 
 ### Ultra small
 
-minified + gzipped: ~3.8KB
+minified + gzipped: ~4.1KB
 
 ## 📖 Reference
 
@@ -279,11 +279,12 @@ The core reactive value.
 
 #### `DerivedSig<T>`
 
-A `Sig` produced by `compute`. Extends `Sig` and additionally tracks the source bindings that feed it.
+A `Sig` produced by `compute`. Extends `Sig` and additionally tracks the source bindings that feed it. When it loses its last consumer it detaches from its sources; when a consumer is added again, it re-links to the (possibly moved) source signals and recomputes once.
 
 | Member | Signature | Description |
 | --- | --- | --- |
 | `addFromBind` | `<S, C>(bind: Bind<S, C>): void` | Registers a source binding. |
+| `addBind` | `<C>(bind: Bind<T, C>): void` | Registers a consumer; re-links to sources and recomputes once if the derived signal was detached. |
 | `cleanup` | `(): void` | Removes every source binding when the derived signal has no consumers. |
 
 #### `compute`
@@ -410,17 +411,18 @@ html`<span>${text(count)}</span>`;
 #### `View<T, C>` / `AnyView`
 
 ```ts
-interface View<T = unknown, C extends CmdContext = CmdContext> {
+interface View<T = unknown, C extends CmdContext = any> {
   type: 'view';
   node: Node;
   bind?: Bind<T, C> | undefined;
   childCommits?: Commit<unknown, CmdContext>[];
+  live?: () => Boundary | undefined;
 }
 
 type AnyView = View<any, any>;
 ```
 
-`View` is the unit returned by `html`, `text`, `view`, and `repeat`. Its `node` is a DOM node or `DocumentFragment`.
+`View` is the unit returned by `html`, `text`, `view`, and `repeat`. Its `node` is a DOM node or `DocumentFragment`. `live` returns the boundary the view currently occupies; `render` calls it at disposal time so a view that swaps its own contents (`view`, `repeat`) is torn down from its current nodes.
 
 #### `extractBoundary` / `replaceWithView`
 
@@ -594,11 +596,11 @@ html`<div>${view(isEmpty, (v) => (v ? text('empty') : list))}</div>`;
 #### `repeat`
 
 ```ts
-interface RepeatProp<T> {
+type RepeatProp<T> = {
   key: (item: T) => string;
   view: (item: T) => AnyView;
   compare?: (a: T, b: T) => boolean;
-}
+};
 
 const repeat: <T>(sig: Sig<T[]>, prop: RepeatProp<T>) => View<T[]>;
 ```
