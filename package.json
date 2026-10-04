@@ -1,6 +1,6 @@
 {
   "name": "sigula",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "author": "zjh <zhanjh@126.com>",
   "description": "Tiny web framework with fine-grained signal reactivity.",
   "license": "MIT",
