@@ -24,6 +24,6 @@
     "vite": "8.3.1"
   },
   "dependencies": {
-    "sigula": "1.0.3"
+    "sigula": "1.0.4"
   }
 }
