@@ -6,6 +6,7 @@ import {
   id,
   on,
   patch,
+  type PatchProps,
   render,
   type Sig,
   sig,
@@ -199,5 +200,104 @@ describe('patch', () => {
     expect(firstEl.getAttribute('data-x')).toBe('ONE');
     expect(secondEl.id).toBe('TWO');
     expect(secondEl.getAttribute('data-x')).toBe('TWO');
+  });
+
+  it('props: static id, val and attr', () => {
+    render(
+      html`<input ${patch({id: 'test', val: 'one', placeholder: 'name'})} />`,
+      document.body,
+    );
+    const input = document.querySelector('input') as HTMLInputElement;
+    expect(input.id).toBe('test');
+    expect(input.value).toBe('one');
+    expect(input.getAttribute('placeholder')).toBe('name');
+  });
+
+  it('props: reactive id, val and attr update', async () => {
+    const sid = sig('a');
+    const sval = sig('one');
+    const sattr = sig('red');
+    render(
+      html`<input ${patch({id: sid, val: sval, 'data-color': sattr})} />`,
+      document.body,
+    );
+    const input = document.querySelector('input') as HTMLInputElement;
+    expect(input.id).toBe('a');
+    expect(input.value).toBe('one');
+    expect(input.getAttribute('data-color')).toBe('red');
+    sid.forceUpdate('b');
+    sval.forceUpdate('two');
+    sattr.forceUpdate('blue');
+    await flush();
+    expect(input.id).toBe('b');
+    expect(input.value).toBe('two');
+    expect(input.getAttribute('data-color')).toBe('blue');
+  });
+
+  it('props: class map toggles and updates', async () => {
+    const active = sig(true);
+    const hidden = sig(false);
+    render(
+      html`<div ${patch({class: {active, hidden}})}></div>`,
+      document.body,
+    );
+    const div = document.querySelector('div') as Element;
+    expect(div.classList.contains('active')).toBe(true);
+    expect(div.classList.contains('hidden')).toBe(false);
+    active.forceUpdate(false);
+    hidden.forceUpdate(true);
+    await flush();
+    expect(div.classList.contains('active')).toBe(false);
+    expect(div.classList.contains('hidden')).toBe(true);
+  });
+
+  it('props: reactive style and styleProp', async () => {
+    const color = sig('red');
+    const size = sig('10px');
+    render(
+      html`<div ${patch({style: {color}, styleProp: {'--size': size}})}></div>`,
+      document.body,
+    );
+    const div = document.querySelector('div') as HTMLElement;
+    expect(div.style.color).toBe('red');
+    expect(div.style.getPropertyValue('--size')).toBe('10px');
+    color.forceUpdate('blue');
+    size.forceUpdate('20px');
+    await flush();
+    expect(div.style.color).toBe('blue');
+    expect(div.style.getPropertyValue('--size')).toBe('20px');
+  });
+
+  it('props: on registers a listener', () => {
+    const handler = vi.fn();
+    render(
+      html`<button ${patch({on: {click: handler}})}>go</button>`,
+      document.body,
+    );
+    document.querySelector('button')?.dispatchEvent(new Event('click'));
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  it('props: composes with patch items', () => {
+    const s = sig('x');
+    render(
+      html`<div ${patch({id: 'a'}, attr(s, 'data-x'))}></div>`,
+      document.body,
+    );
+    const div = document.querySelector('div') as Element;
+    expect(div.id).toBe('a');
+    expect(div.getAttribute('data-x')).toBe('x');
+  });
+
+  it('props: empty object is a no-op', () => {
+    render(html`<div ${patch({})}>x</div>`, document.body);
+    expect(document.querySelector('div')?.innerHTML).toBe('x');
+  });
+
+  it('props: skips undefined values', () => {
+    const props = {} as PatchProps;
+    (props as Record<string, unknown>)['data-x'] = undefined;
+    render(html`<div ${patch(props)}></div>`, document.body);
+    expect(document.querySelector('div')?.hasAttribute('data-x')).toBe(false);
   });
 });

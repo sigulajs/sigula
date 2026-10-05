@@ -18,6 +18,18 @@ export type ToPatchItem<T> = (el: Element) => PatchItem<T>;
 export type AnyPatchItem = PatchItem<any>;
 export type ToAnyPatchItem = (el: Element) => AnyPatchItem;
 
+type Reactive<T> = T | Sig<T>;
+
+export interface PatchProps {
+  id?: Reactive<string>;
+  val?: Reactive<string>;
+  class?: Record<string, Reactive<boolean>>;
+  style?: Partial<Record<WritableStyleKey, Reactive<string>>>;
+  styleProp?: Record<string, Reactive<string>>;
+  on?: {[K in keyof HTMLElementEventMap]?: (ev: HTMLElementEventMap[K]) => void};
+  [attr: string]: unknown;
+}
+
 const _noop = (): void => {};
 export interface Patch {
   type: 'patch';
@@ -25,11 +37,20 @@ export interface Patch {
   cleanBinds: () => void;
 }
 
-export const patch = (...toPatchItems: ToAnyPatchItem[]): Patch => ({
-  type: 'patch',
-  toPatchItems,
-  cleanBinds: _noop,
-});
+export function patch(props: PatchProps, ...items: ToAnyPatchItem[]): Patch;
+export function patch(...toPatchItems: ToAnyPatchItem[]): Patch;
+export function patch(
+  first?: PatchProps | ToAnyPatchItem,
+  ...rest: ToAnyPatchItem[]
+): Patch {
+  const toPatchItems =
+    typeof first === 'function'
+      ? [first, ...rest]
+      : first
+        ? [..._propsToItems(first), ...rest]
+        : rest;
+  return {type: 'patch', toPatchItems, cleanBinds: _noop};
+}
 
 // Every patch item is the same shape -- bind `source` to `elem` plus whatever
 // arguments the command needs -- so the whole body lives here once.
@@ -152,3 +173,49 @@ export const on = <K extends keyof HTMLElementEventMap>(
   listener: _Listener<K>,
   options?: boolean | AddEventListenerOptions,
 ): ToPatchItem<_Listener<K>> => _toPatchItem(listener, [type, options], onCmd);
+
+const _propsToItems = (props: PatchProps): ToAnyPatchItem[] => {
+  const items: ToAnyPatchItem[] = [];
+  for (const [key, value] of Object.entries(props)) {
+    if (value === undefined) continue;
+    switch (key) {
+      case 'id':
+        items.push(id(value as Reactive<string>));
+        break;
+      case 'val':
+        items.push(val(value as Reactive<string>));
+        break;
+      case 'class':
+        for (const [token, v] of Object.entries(
+          value as Record<string, Reactive<boolean>>,
+        )) {
+          if (v !== undefined) items.push(toggleClass(v, token));
+        }
+        break;
+      case 'style':
+        for (const [name, v] of Object.entries(
+          value as Partial<Record<WritableStyleKey, Reactive<string>>>,
+        )) {
+          if (v !== undefined) items.push(style(v, name as WritableStyleKey));
+        }
+        break;
+      case 'styleProp':
+        for (const [name, v] of Object.entries(
+          value as Record<string, Reactive<string>>,
+        )) {
+          if (v !== undefined) items.push(styleProp(v, name));
+        }
+        break;
+      case 'on':
+        for (const [type, listener] of Object.entries(
+          value as Record<string, _Listener<keyof HTMLElementEventMap>>,
+        )) {
+          items.push(on(type as keyof HTMLElementEventMap, listener));
+        }
+        break;
+      default:
+        items.push(attr(value, key));
+    }
+  }
+  return items;
+};
