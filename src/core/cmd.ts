@@ -4,6 +4,7 @@
  * @group Low-level API
  */
 export interface CmdContext {
+  /** Any string key; values are unconstrained. */
   [key: string]: unknown;
 }
 /**

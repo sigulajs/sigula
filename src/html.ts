@@ -137,6 +137,7 @@ const _scan = (
 };
 
 type TextValue = string | number | boolean | bigint | null | undefined;
+// biome-ignore lint/suspicious/noExplicitAny: any val sig
 type HtmlItem = Patch | AnyView | TextValue | Sig<any>;
 
 /**

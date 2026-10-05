@@ -8,6 +8,7 @@ import {createBind, DerivedSig, Sig} from './sig.bind';
  * @group Reactivity
  */
 export interface SigRecord {
+  /** Each key maps to a signal of any value type. */
   // biome-ignore lint/suspicious/noExplicitAny: any sig val
   [key: string]: Sig<any>;
 }

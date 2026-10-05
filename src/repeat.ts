@@ -27,7 +27,11 @@ export type RepeatProp<T> = {
   key: (item: T) => string;
   /** Builds the view for an item. */
   view: (item: T) => AnyView;
-  /** Item comparator; defaults to `eq`. */
+  /**
+   * Item comparator.
+   *
+   * @defaultValue `eq`
+   */
   eq?: (a: T, b: T) => boolean;
 };
 
