@@ -28,7 +28,7 @@ interpolations only.
 
 ```ts
 type TextValue = string | number | boolean | bigint | null | undefined;
-type HtmlItem = Patch | AnyView | TextValue | Sig<unknown>;
+type HtmlItem = Patch | AnyView | TextValue | Sig<any>;
 
 export const html = (
   strs: TemplateStringsArray,
@@ -36,9 +36,10 @@ export const html = (
 ): View;
 ```
 
-`TextValue` and `HtmlItem` are internal aliases, not exported. `Sig<T>`'s methods
-are declared with method syntax and are therefore bivariant, so `Sig<string>` is
-assignable to `Sig<unknown>`.
+`TextValue` and `HtmlItem` are internal aliases, not exported. `Sig<T>` is
+invariant because of its private `_eq: Eq<T>` field, so `Sig<string>` is not
+assignable to `Sig<unknown>`. `HtmlItem` uses `Sig<any>` instead, consistent
+with `AnyView = View<any, any>`.
 
 ### Normalization policy
 

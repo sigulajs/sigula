@@ -143,7 +143,7 @@ with:
 
 ```ts
 type TextValue = string | number | boolean | bigint | null | undefined;
-type HtmlItem = Patch | AnyView | TextValue | Sig<unknown>;
+type HtmlItem = Patch | AnyView | TextValue | Sig<any>;
 
 export const html = (
   strs: TemplateStringsArray,
@@ -166,7 +166,7 @@ Expected: PASS, including all pre-existing `html` cases.
 - [ ] **Step 7: Typecheck**
 
 Run: `pnpm typecheck`
-Expected: PASS, no errors. `Sig<string>` is assignable to the `Sig<unknown>` member of `HtmlItem` because `Sig`'s methods are bivariant.
+Expected: PASS, no errors. `Sig` is invariant because of its private `_eq: Eq<T>` field, so `HtmlItem` uses `Sig<any>`; `Sig<string>` is assignable to it.
 
 - [ ] **Step 8: Commit**
 
@@ -191,7 +191,7 @@ Replace the section beginning `#### \`html\`` through the caching paragraph (cur
 
 ```ts
 type TextValue = string | number | boolean | bigint | null | undefined;
-type HtmlItem = Patch | AnyView | TextValue | Sig<unknown>;
+type HtmlItem = Patch | AnyView | TextValue | Sig<any>;
 
 const html: (strs: TemplateStringsArray, ...items: HtmlItem[]) => View;
 ```
