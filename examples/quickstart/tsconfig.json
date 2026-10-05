@@ -1,0 +1,49 @@
+{
+  // Visit https://aka.ms/tsconfig to read more about this file
+  "compilerOptions": {
+    // File Layout
+    "rootDir": "./src",
+    "outDir": "./dist",
+    // target & lib
+    "target": "esnext",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    // module system
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    // emit
+    "noEmit": true,
+    // "jsx": "react-jsx",
+    // isolate & verbatim
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    // strict
+    "strict": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noUncheckedIndexedAccess": true,
+    "noUncheckedSideEffectImports": true,
+    "exactOptionalPropertyTypes": true,
+    // module interop
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "moduleDetection": "force",
+    // Paths
+    // "baseUrl": ".",
+    "paths": {
+      "#/*": ["./src/*"],
+      "#root/*": ["./*"]
+    },
+    // Performance
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    // Vite env
+    "types": ["vite/client"]
+    // "noImplicitReturns": true,
+    // "noPropertyAccessFromIndexSignature": true,
+  },
+  "include": ["./src"]
+}

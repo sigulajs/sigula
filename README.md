@@ -4,16 +4,28 @@
 
 A minimal, signal-based web framework with fine-grained reactivity. No virtual DOM — just direct, minimal updates to the real DOM.
 
+```ts
+import {html, on, patch, render, sig, text} from 'sigula';
+
+const count = sig(0);
+
+render(
+  html`<p>${count}</p>
+       <button ${patch(on('click', () => count.trans((v) => v + 1)))}>+1</button>`,
+  document.querySelector('#app')!,
+);
+```
+
 ## ✨ Features
 
-- Fine-grained signal reactivity — when state changes, only the DOM nodes that actually depend on it are updated, not the whole component tree
-- Declarative signal sources + precise bindings — describe data sources declaratively with signals, then bind them precisely to the DOM or any effect
-- No virtual DOM — no diffing, no VNodes. Direct real DOM operations with minimal runtime overhead
-- Minimal HTML templates — based on native string templates. No custom compiler, no DSL — just JavaScript strings
-- Batched, coalesced updates — writes are queued in a microtask, so a signal touched many times before the flush runs its bindings once, with the final value
-- Ultra small — ~4.0KB minified + gzipped
-- TypeScript friendly — full type inference for signals and template bindings
-- Simple but performant — tiny API surface, low mental overhead, no compromise on performance
+- **Fine-grained signal reactivity** — when a signal changes, only the DOM nodes that actually depend on it are updated, not the whole component tree.
+- **Declarative sources + precise bindings** — describe state with signals, then bind them precisely to a text node, an attribute, or an effect.
+- **No virtual DOM** — no VNodes, no diffing, no reconciliation pass. Direct real DOM operations.
+- **Native string templates** — `html` is a tagged template over plain JavaScript strings. No custom compiler, no JSX transform, no `.vue` files.
+- **Batched, coalesced updates** — writes are queued in a microtask; a signal touched many times before the flush runs each dependent binding once, against the final value.
+- **Ultra small** — ~4.5KB minified + gzipped, with an API surface you can read in one sitting.
+- **TypeScript first** — full type inference for signals, template bindings, and patch commands.
+- **Zero tooling** — ESM-only, `sideEffects: false`, no build step required to author components.
 
 ## Installation
 
@@ -23,225 +35,395 @@ pnpm add sigula
 yarn add sigula
 ```
 
+Sigula is ESM-only and ships type declarations. Importing the module is side-effect free; the DOM is only touched when you actually render.
+
 ## Quick Start
 
+### 1. Render something
+
 ```ts
-import {compute, html, on, patch, render, sig, text, type View} from 'sigula';
+import {html, render} from 'sigula';
 
-const Equation = (): View => {
-  const x = sig(0);
-  const y = sig(1);
+const app = document.querySelector('#app')!;
 
-  const s = {x, y};
-  const sum = compute(s, (v) => v.x + v.y);
-  const product = compute(s, (v) => v.x * v.y);
-  const diff = compute(s, (v) => v.x - v.y);
-  const quotient = compute(s, (v) => v.x / v.y);
-
-  const xSquare = compute(x, (v) => v * v);
-  const ySquare = compute(y, (v) => v * v);
-
-  const sumDiffProduct = compute({sum, diff}, (v) => v.sum * v.diff);
-  const squareDiff = compute({xSquare, ySquare}, (v) => v.xSquare - v.ySquare);
-
-  return html`<div>
-    <h1>Equation</h1>
-    <div>
-      <p>x: ${text(x)} -
-        <button ${patch(on('click', () => x.trans((v) => v + 1)))}>+1</button>
-        <button ${patch(on('click', () => x.trans((v) => v - 1)))}>-1</button>
-      </p>
-      <p>y: ${text(y)} -
-        <button ${patch(on('click', () => y.trans((v) => v + 1)))}>+1</button>
-        <button ${patch(on('click', () => y.trans((v) => v - 1)))}>-1</button>
-      </p>
-      <p>sum: x + y = ${text(x)} + ${text(y)} = ${text(sum)}</p>
-      <p>difference: x - y = ${text(x)} - ${text(y)} = ${text(diff)}</p>
-      <p>product: x * y = ${text(x)} * ${text(y)} = ${text(product)}</p>
-      <p>quotient: x / y = ${text(x)} / ${text(y)} = ${text(quotient)}</p>
-      <p>
-        (x + y)(x - y)
-          = (${text(x)} + ${text(y)})(${text(x)} - ${text(y)})
-          = ${text(sum)}*${text(diff)} = ${text(sumDiffProduct)}
-        <br />
-        = x^2 - y^2 = ${text(xSquare)} - ${text(ySquare)} = ${text(squareDiff)}
-      </p>
-    </div>
-  </div>`;
-};
-
-const appNode = document.querySelector('#app');
-if (!appNode) throw new Error('#app not found');
-render(Equation(), appNode);
+render(html`<h1>Hello, world!</h1>`, app);
 ```
 
-## 🧠 Core Concepts
+`html` returns a `View` — a real `DocumentFragment` plus the metadata Sigula needs to update it later. `render(view, node)` appends it and returns a disposer.
 
-### Fine-grained updates to the real DOM
-
-Traditional frameworks like React re-run component functions, generate a virtual DOM, diff it, and finally apply changes to the real DOM. Sigula works completely differently:
+### 2. Make it reactive
 
 ```ts
-import {html, text} from 'sigula';
+import {html, render, sig} from 'sigula';
 
 const name = sig('Alice');
 
-const App = html`<h1>Hello, ${text(name)}!</h1>`;
+render(html`<h1>Hello, ${name}!</h1>`, app);
 
-// When name changes, only the text node inside <h1> is updated
-name.update('Bob'); // → the text changes from "Hello, Alice!" to "Hello, Bob!"
+// Only the text node inside <h1> is updated.
+name.update('Bob'); // → "Hello, Bob!"
 ```
 
-Only the exact text node that depends on `name` is updated. Everything else stays untouched.
+A `Sig` interpolated in a **content position** is upgraded to a `text()` view automatically, so `${name}` and `${text(name)}` are equivalent.
 
-### Declarative signal sources + precise bindings
+### 3. Handle events and patch attributes
 
-Signals are the single source of truth. Every view and side effect is derived from them:
+Dynamic values in an **attribute position** must be wrapped in `patch(...)`:
 
 ```ts
-import {
-  compute,
-  html,
-  on,
-  patch,
-  render,
-  repeat,
-  type Sig,
-  sig,
-  style,
-  text,
-  type View,
-  val,
-  view,
-} from 'sigula';
+import {compute, html, on, patch, render, sig, style, text} from 'sigula';
 
-interface Todo {
-  id: number;
-  text: string;
-  done: Sig<boolean>;
-}
+const count = sig(0);
+const color = compute(count, (v) => (v >= 0 ? 'green' : 'red'));
 
-const Todos = (): View => {
-  const input = sig('');
-  const todos = sig<Todo[]>([]);
-  const filter = sig<'all' | 'active' | 'done'>('all');
+render(
+  html`<p ${patch(style('color', color))}>${text(count)}</p>
+       <button ${patch(on('click', () => count.trans((v) => v + 1)))}>+1</button>
+       <button ${patch(on('click', () => count.trans((v) => v - 1)))}>-1</button>`,
+  app,
+);
+```
 
-  // Derived Signals
-  const visibleTodos = compute({todos, filter}, (v) => {
-    switch (v.filter) {
-      case 'active':
-        return v.todos.filter((t) => !t.done.get());
-      case 'done':
-        return v.todos.filter((t) => t.done.get());
-      default:
-        return v.todos;
-    }
-  });
+### 4. Split into components
 
-  const isEmpty = compute(visibleTodos, (v) => v.length <= 0);
+There is no component class, no lifecycle, no registration. **A component is just a function that returns a `View`.** It runs once, wires up bindings, and is never called again.
 
-  const addTodo = (e: Event) => {
-    e.preventDefault();
-    if (!input.get().trim()) return;
+```ts
+import {html, on, patch, render, sig, type View} from 'sigula';
 
-    todos.trans((items) => [
-      ...items,
-      {id: Date.now(), text: input.get().trim(), done: sig(false)},
-    ]);
-    input.update('');
-  };
-
-  const remove = (id: number) => {
-    todos.trans((items) => items.filter((item) => item.id !== id));
-  };
-
-  const itemView = (item: Todo) => html`<li>
-      <span
-        ${patch(
-          on('click', () => item.done.trans((v) => !v)),
-          style(
-            'textDecoration',
-            compute(item.done, (v): string => (v ? 'line-through' : 'none')),
-          ),
-        )}
-      >${text(item.text)}</span>
-      <button ${patch(on('click', () => remove(item.id)))}>x</button>
-    </li>`;
-
-  // Bind precisely to the DOM
-  return html`<div style="margin: 2rem auto; max-width: 400px">
-    <h1>Todos</h1>
-    <form ${patch(on('submit', addTodo))}>
-      <input ${patch(
-        val(input),
-        on('change', (e) => {
-          if (e.target) input.update((e.target as HTMLInputElement).value);
-        }),
-      )} />
-      <button>Add</button>
-    </form>
-    <div>
-      filter:
-      <button ${patch(on('click', () => filter.update('all')))}>all</button>
-      <button ${patch(on('click', () => filter.update('active')))}>active</button>
-      <button ${patch(on('click', () => filter.update('done')))}>done</button>
-    </div>
-    ${view(isEmpty, (v) =>
-      v
-        ? text('empty')
-        : html`<ul>${repeat(visibleTodos, {
-            key: (item) => item.id.toString(),
-            view: (item) => itemView(item),
-          })}</ul>`,
-    )}
+const Counter = (initial: number): View => {
+  const count = sig(initial);
+  return html`<div>
+    <span>${count}</span>
+    <button ${patch(on('click', () => count.trans((v) => v + 1)))}>+1</button>
   </div>`;
 };
 
-const appNode = document.querySelector('#app');
-if (!appNode) throw new Error('#app not found');
-render(Todos(), appNode);
+render(html`<main>${Counter(0)} ${Counter(100)}</main>`, app);
 ```
 
-Signals can bind to the DOM, to effects, or to other computed signals — one reactive model across the entire application.
+Because the function body runs exactly once, `sig(initial)` *is* the local state — no hooks, no `this`, no re-run semantics to reason about.
 
-### No virtual DOM
-
-Sigula does not create VNodes and does not diff trees. During the initial mount, the template establishes direct subscriptions between signals and DOM nodes. Every subsequent signal change goes straight to the corresponding DOM node.
-
-This means:
-- No VNode creation or destruction overhead
-- No diffing traversal cost
-- Memory usage scales linearly with DOM nodes, not with component tree depth
-
-### Minimal HTML templates
-
-Templates are plain JavaScript native string templates. No custom compiler, no `.vue` files, no JSX transform:
+### 5. Render lists conditionally
 
 ```ts
-const App: View = html`
-  <div class="card">
-    <h2>${text(title)}</h2>
-    <p>${text(description)}</p>
-    <button ${patch(on('click', handleClick))}>Click me</button>
-  </div>
-`;
+import {compute, html, on, patch, render, repeat, sig, text, val, view} from 'sigula';
+
+interface Todo { id: number; text: string; done: boolean }
+
+const Todos = () => {
+  const input = sig('');
+  const todos = sig<Todo[]>([]);
+  const filter = sig<'all' | 'active'>('all');
+
+  const visible = compute({todos, filter}, (v) =>
+    v.filter === 'active' ? v.todos.filter((t) => !t.done) : v.todos,
+  );
+  const isEmpty = compute(visible, (v) => v.length === 0);
+
+  const add = (e: Event) => {
+    e.preventDefault();
+    if (!input.get().trim()) return;
+    todos.trans((items) => [...items, {id: Date.now(), text: input.get().trim(), done: false}]);
+    input.update('');
+  };
+
+  return html`<form ${patch(on('submit', add))}>
+      <input ${patch(val(input), on('change', (e) => input.update((e.target as HTMLInputElement).value)))} />
+      <button>Add</button>
+    </form>
+    ${view(isEmpty, (empty) =>
+      empty
+        ? text('Nothing here yet')
+        : html`<ul>${repeat(visible, {
+            key: (t) => t.id.toString(),
+            view: (t) => html`<li>${text(t.text)}</li>`,
+          })}</ul>`,
+    )}`;
+};
+
+const dispose = render(Todos(), app);
+dispose(); // detaches every binding and removes the nodes
 ```
 
-`html` is a tagged template function that returns a mountable template (`View`) object. You can use any editor's syntax highlighting, formatting, and ESLint rules — no extra tooling required. Templates are cached per call site, so rendering the same template twice only parses it once.
+Runnable versions live in [`examples/`](./examples) (`equation`, `filtertodos`).
 
-### Ultra small
+## 🧠 Core Concepts
 
-minified + gzipped: ~4.0KB
+### The whole architecture in one picture
 
-## 📖 Reference
+```
+        ┌──────────────── Core Concepts ────────────────┐
+        │                                               │
+  Sig ──┤  holds a value + a list of Binds              │  state
+        │                                               │
+  Bind ─┤  { sig, context, cmd }                        │  the edge
+        │                                               │
+  Cmd ──┤  (value, context) => void                     │  the work
+        │                                               │
+  View ─┤  { node, boundary(), cleanBinds() }           │  DOM region
+  Patch ┤  deferred commands for one element            │
+        │                                               │
+  Queue ┤  one global microtask, coalesced per Bind     │  scheduling
+        └───────────────────────────────────────────────┘
+```
+
+Everything else in the library is a convenience layer over these five pieces. Read the rest as: *how do I create a `Bind`, and what `Cmd` should it run?*
+
+### Signals: `sig`
+
+A `Sig<T>` is a value container that owns a list of **bindings**. It never touches the DOM itself.
+
+```ts
+const count = sig(0);
+
+count.get();              // 0 — read the current value
+count.update(1);          // set; dependents notified only if not deeply equal
+count.update(1);          // no-op: deeply equal, nothing is scheduled
+count.forceUpdate(1);     // set and always notify (even when equal)
+count.trans((v) => v + 1);// apply a function to the current value
+count.notify();           // re-run dependents without changing the value
+```
+
+| Method | Purpose |
+| --- | --- |
+| `get()` | Read the current value. |
+| `update(v)` | Write, skipping the notification when `eq(v, current)`. |
+| `forceUpdate(v)` | Write and always notify. Use after a structurally-equal-but-new value. |
+| `trans(fn)` | `update(fn(current))` — the idiomatic way to derive the next state. |
+| `notify()` | Re-run dependents against the current value. Use after mutating a held object/array **in place**. |
+| `addBind` / `removeBind` / `getBinds` | Low-level binding management; prefer `createBind` or the template APIs. |
+
+**Equality is deep by default.** `update` compares with `eq`, a structural comparator covering primitives, arrays, `Date`, `RegExp`, `Map`, `Set` and plain objects, and delegating to `a.equals(b)` when the value implements `Equatable`. Replacing `{a: 1}` with another `{a: 1}` is therefore a no-op. Values with different prototypes are never equal. `new Sig(v, {eq})` accepts a custom comparator.
+
+**In-place mutation needs `notify()`.** Sigula does not proxy your objects. If you mutate a held array or object instead of replacing it, the value identity never changes and `update` cannot see it:
+
+```ts
+const items = sig<string[]>([]);
+items.get().push('a');   // value object mutated, no write detected
+items.notify();          // ← tell dependents to re-run
+```
+
+### Bindings: the unit of reactivity
+
+A binding is a three-field record — that is the entire reactive primitive:
+
+```ts
+interface Bind<T, C> {
+  sig: Sig<T>;           // what it observes
+  context: C;            // where the result goes (a text node, an element, …)
+  cmd: (val: T, ctx: C) => void;  // what to do with the new value
+  removed: boolean;
+  queued?: boolean;
+}
+```
+
+So "fine-grained" is literal: `text(name)` creates a bind whose `context` is one `Text` node and whose `cmd` is `node.textContent = String(val)`. Nothing else in the tree is involved.
+
+```ts
+const name = sig('Alice');
+const v = text(name);   // Bind{ sig: name, context: {node: <Text>}, cmd: textCmd }
+
+name.update('Bob');     // → textCmd('Bob', {node}) → that one node changes
+```
+
+Because a `Cmd` is just a function, the same model covers DOM writes, derived values, and arbitrary side effects — there is no separate `effect()`/`watch()` API to learn.
+
+### Derived signals: `compute`
+
+`compute` returns a `DerivedSig<T>`, which is a `Sig` you cannot write to. Two overloads:
+
+```ts
+const x = sig(1);
+const doubled = compute(x, (v) => v * 2);          // from one signal
+
+const sum = compute({x, y}, (v) => v.x + v.y);     // from a record of signals
+```
+
+With the record form, `fn` receives the matching record of *values* (`ValRecord<S>`), fully typed. Derived signals compose: a `DerivedSig` is a valid source for another `compute`, and a valid interpolation target in a template.
+
+Derived signals are **lazy about upstream**. A `DerivedSig` detaches from its sources when it loses its last consumer (which happens whenever a `view()` subtree is hidden), and re-links and recomputes once when a consumer comes back. You get the memory savings without manual disposal.
+
+### Templates: `html`
+
+```ts
+const html = (strs: TemplateStringsArray, ...rawItems: HtmlItem[]): View;
+```
+
+`html` is a tagged template over **native HTML strings** — no compiler, no DSL, no JSX pragma. Interpolations fall into two positions, and the distinction is the one rule to memorize:
+
+| Position | What goes there | Example |
+| --- | --- | --- |
+| **Content** (child slot) | a `View`, `text`, `raw`, a `Sig`, or any primitive | `` html`<h1>${name}</h1>` `` |
+| **Attribute** (inside a tag) | a `Patch` from `patch(...)` | `` html`<input ${patch(val(name))} />` `` |
+
+Anything interpolated in a content position that is not already a `View` or `Patch` is coerced with `text()`, i.e. escaped and rendered as `String(value)`:
+
+```ts
+const sigItem  = sig('signal item');
+const strItem  = 'string data';
+const numItem  = 2026;
+const htmlItem = html`<span>Html Span Element</span>`;
+
+render(
+  html`<p>${sigItem} / ${strItem} / ${numItem}</p>
+       <div>${htmlItem}</div>
+       <div>${raw('<strong>Trusted</strong> HTML')}</div>`,
+  app,
+);
+
+sigItem.update('string with <strong>markup</strong>'); // stays escaped — renders as text
+```
+
+`raw(source)` parses its value through a detached `<template>` and mounts the resulting nodes with no wrapper element. **It does not escape** — only ever pass trusted HTML.
+
+#### How parsing works (and why it is fast)
+
+Every call site gets a random marker, `@sig_<rand>`. Interpolations are rendered into the template string as:
+
+- an **attribute marker** `@sig_x` for a `Patch`,
+- a **comment marker** `<!--@sig_x-->` for a `View`.
+
+```html
+<div @sig_2734618> <!--@sig_2734618--> <!--@sig_2734618--> </div>
+```
+
+Therefore parsing needs no regular expressions: Sigula walks the parsed fragment with a single `TreeWalker`, collects each marker node in order, and commits the matching item (`commitPatch` for elements, `commitView` for comments). The uniform format is also what makes the API extensible — `id`, `on`, `attr`, `style` are all just patch items, and you can write your own.
+
+Two consequences worth knowing:
+
+1. **One `Patch` per element.** The marker is an attribute, so a second `patch()` on the same element cannot be located. Combine everything into a single `patch(...)` call — that is what its variadic form is for.
+2. **Templates are cached per call site** (a `WeakMap` on the `TemplateStringsArray`), and the cache key includes the *mix* of patch/view slots (a bitmask for up to 31 slots, a string beyond that). Repeated renders skip parsing entirely; a call site that changes its interpolation mix simply gets a fresh template.
+
+The returned `View` is `{node, children, boundary(), cleanBinds()}` — see [Boundaries](#boundaries-and-teardown).
+
+### Patching an element: `patch`
+
+`patch` declares bindings to apply to **one** element. It accepts either a props object, or a list of command items, or both:
+
+```ts
+// Props form — desugared into commands
+html`<input ${patch({id: 'name', val: name, placeholder: 'Your name'})} />`
+
+// Command form
+html`<input ${patch(val(name), attr('placeholder', placeholder))} />`
+```
+
+The props object handles `id`, `val`, `class`, `style`, `styleProp`, `on`; any other key becomes an attribute. A key whose value is `undefined` is skipped.
+
+| Command | What it does |
+| --- | --- |
+| `id(source)` | Sets `element.id`. |
+| `val(source)` | Sets the `value` **property** (form controls). |
+| `attr(key, source)` | `setAttribute(key, …)` — for boolean/ARIA/data attributes. |
+| `style(key, source)` | Sets a typed inline style property. |
+| `styleProp(key, source)` | `style.setProperty` — for `--custom-properties`. |
+| `toggleClass(token, source)` | Toggles one class from the truthiness of the value. |
+| `toggleClasses(tokens, source)` | Toggles several classes from one value. |
+| `on(type, listener, options?)` | `addEventListener`. |
+| `act(source, fn)` | Escape hatch: run arbitrary code with `(element, value)`. |
+
+Every command takes a plain value (applied once at mount) **or** a `Sig` (applied at mount and re-applied on change):
+
+```ts
+const disabled = sig(false);
+const label = 'Submit';
+
+html`<button ${patch(attr('disabled', disabled), attr('aria-label', label))}>Go</button>`
+//                    ↑ reactive                  ↑ static
+```
+
+Note that `on` registers the listener **once at mount**; the listener itself is not a reactive source. Drive updates by writing to a signal inside it.
+
+### Control flow
+
+Sigula has exactly four control-flow helpers, all returning a `View`:
+
+| Helper | Use it for |
+| --- | --- |
+| `view(sig, viewFn)` | Swap one view for another when `sig` changes (conditional rendering). |
+| `repeat(sig, {key, view, eq?})` | Keyed list rendering with minimal DOM reuse/moves. |
+| `list(items, viewFn)` | A **static** array rendered once — no keying, no reconciliation. |
+| `frag(...views)` | Compose several views as flat siblings with no wrapper element. |
+
+```ts
+// conditional
+${view(isEmpty, (empty) => (empty ? text('empty') : listView))}
+
+// keyed list
+${repeat(todos, {
+  key: (t) => t.id.toString(),
+  view: (t) => html`<li>${text(t.text)}</li>`,
+  eq: (a, b) => a.id === b.id && a.text === b.text, // optional, defaults to eq
+})}
+```
+
+`repeat` matches items by `key` with a two-pointer walk, reusing, moving, creating, or removing as few nodes as possible, and uses `moveBefore` when available to preserve element state across moves. When nothing changed — same keys, same order, equal items — it bails out before touching the DOM at all. Use `list` instead when the array never changes shape.
+
+### Boundaries and teardown
+
+A `View` occupies a contiguous **range of sibling nodes**, described by `boundary(): {start, end}`. This is how Sigula swaps or removes multi-node regions without a wrapper element or a virtual tree.
+
+Teardown is explicit and recursive:
+
+```ts
+const dispose = render(App(), app);
+dispose();   // removeBoundary(view.boundary()) + view.cleanBinds()
+```
+
+`cleanBinds()` detaches the view's own bind and, recursively, all child binds. When a `Sig` loses its last bind it calls `cleanup()`, so a subtree that is removed stops receiving updates immediately — no manual effect cleanup, no leak by default.
+
+### The update queue
+
+Writes never run synchronously. Every write pushes the signal's binds onto one global queue and schedules a single `queueMicrotask`.
+
+```ts
+sig0.update(a);   // ┐
+sig1.update(b);   // ├── one microtask
+sig2.update(c);   // ┘
+
+sig.update(1); sig.update(2); sig.update(3);  // each dependent binding runs ONCE, against 3
+```
+
+- **Batched** across signals — many writes, one flush.
+- **Coalesced per binding** — a `queued` flag keeps a bind from entering the queue twice; since `cmd` reads `sig.get()` at call time, it always sees the newest value.
+- **Error-isolated** — a throwing bind is logged (`console.error('[Queue] task failed:', …)`) and the rest of the queue still runs.
+
+### What Sigula deliberately does not have
+
+| Not included | Why |
+| --- | --- |
+| Virtual DOM / diffing | Updates are bound at mount time; there is nothing to diff. |
+| A component instance or lifecycle | A component is a function that returns a `View`, and it runs once. |
+| A compiler / build step | Templates are native tagged-template strings. |
+| A router, store, or SSR runtime | Out of scope. Sigula is the rendering and reactivity layer; bring your own. |
+| Proxy-based deep reactivity | Values are compared, not wrapped. Mutate in place and call `notify()`. |
+| Automatic dependency tracking | Bindings are explicit (`sig` → `cmd` → target), which is what keeps the runtime at ~4.5KB. |
+
+## 📖 API Cheat Sheet
+
+| Export | Kind | Returns |
+| --- | --- | --- |
+| `sig(v)` | state | `Sig<T>` |
+| `compute(sig, fn)` / `compute(record, fn)` | derived | `DerivedSig<T>` |
+| `html\`…\`` | template | `View` |
+| `text(source)` | template | `View` (escaped text node) |
+| `raw(source)` | template | `View` (**unescaped** HTML) |
+| `patch(props \| …items)` | binding | `Patch` |
+| `id`, `val`, `attr`, `style`, `styleProp`, `toggleClass`, `toggleClasses`, `on`, `act` | patch commands | `ToPatchItem<T>` |
+| `view(sig, viewFn)` | control flow | `View` |
+| `repeat(sig, {key, view, eq?})` | control flow | `View` |
+| `list(items, viewFn)` | control flow | `View` (static) |
+| `frag(...views)` | composition | `View` |
+| `render(view \| () => view, node)` | mounting | disposer `() => void` |
+| `createBind`, `removeBind`, `eq`, `toBoundary`, `walkBoundary` | low-level | — |
+| `Sig`, `DerivedSig`, `View`, `Patch`, `Reactive<T>`, `Eq<T>`, `Equatable` | types | — |
 
 The full API reference is generated from the TSDoc comments in the source: see [Reference.md](./Reference.md).
 
 ## Errors
 
-Runtime errors carry a short code in `message` instead of a sentence, so the
-string tables stay out of the bundle. Codes with arguments are colon-separated.
-Look yours up here:
+Runtime errors carry a short code in `message` instead of a sentence, so the string tables stay out of the bundle. Codes with arguments are colon-separated.
 
 | Code | Thrown by | Meaning |
 | --- | --- | --- |
@@ -256,16 +438,20 @@ Look yours up here:
 | `E9` | `repeat` | There is no node after the fence to move before. |
 | `E10` | `html` | The template is empty (an empty tagged template). |
 | `E11:<expected>:<got>` | `html` | Interpolation count does not match the template's slots. |
-| `E12` | `html` | Unmatched interpolation; a `Patch` must be in an attribute position and a `View`/text value in a content position. |
+| `E12` | `html` | Unmatched interpolation: a `Patch` must sit in an attribute position, a `View`/text value in a content position. |
 
-## Reactivity model
+## How it compares
 
-- **Batched.** When a signal changes, its bindings are queued, not run synchronously.
-- **Coalesced per binding.** A binding that is written to multiple times before the microtask flush runs once, reading the signal's final value. `sig.update(1); sig.update(2); sig.update(3)` runs each dependent binding a single time against `3`.
-- **`update` vs `forceUpdate`.** `update` skips work when the new value is deeply equal to the current one; `forceUpdate` always notifies. Use `forceUpdate` when a value is structurally equal but you still need a re-render (for example, mutating an object in place).
-- **`notify` for in-place mutation.** `sig.notify()` re-runs dependents against the current value without setting a new one. Use it after mutating a held object or array in place; `update`/`forceUpdate` set a value. On a `DerivedSig`, `notify` schedules its consumers but does not itself recompute the derived value.
-- **Error isolation.** A throwing binding does not stop the rest of the queue; the error is logged as `console.error('[Queue] task failed:', error, bind)`.
-- **Deep equality by default.** `update`, `compute`, and `repeat` compare with `eq`, so replacing `{a: 1}` with another `{a: 1}` is a no-op.
+|  | Sigula | Lit | Solid | React |
+| --- | --- | --- | --- | --- |
+| Update model | Signal → bind → DOM node | Property → `render()` → part commit | Signal → compiled DOM | Component re-render → VDOM diff |
+| Compiler required | No | No | Yes (JSX/babel) | Yes (JSX) |
+| Component re-runs | Never | On property change | Never | On every state change |
+| Approx. size | ~4.5KB min+gzip | ~5KB | ~7KB | — (much larger runtime) |
+| Templating | Native tagged templates | Tagged templates | JSX | JSX |
+| Standard Web Components | No (any DOM node) | Yes | No | No |
+
+*Size figures are each project's own published claim, measured with different tooling and feature sets — treat them as an order of magnitude, not a benchmark.*
 
 ## License
 
