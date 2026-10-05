@@ -112,6 +112,52 @@ describe('list', () => {
     await Promise.resolve();
     expect(document.body.innerHTML).toBe('1:b2:b');
   });
+
+  it('disposes nodes when an edge item swaps its node', async () => {
+    const mode = sig(true);
+    const dispose = render(
+      list([1, 2], (n) =>
+        n === 1
+          ? view(mode, (v) => (v ? html`<i>1</i>` : html`<b>1</b>`))
+          : text('2'),
+      ),
+      document.body,
+    );
+    expect(document.body.innerHTML).toBe('<i>1</i>2');
+
+    mode.update(false);
+    await Promise.resolve();
+    expect(document.body.innerHTML).toBe('<b>1</b>2');
+
+    dispose();
+    expect(document.body.innerHTML).toBe('');
+  });
+
+  it('disposes correctly when a list edge item swaps inside html', async () => {
+    const mode = sig(true);
+    const dispose = render(
+      html`${list([1], () =>
+        view(mode, (v) => (v ? html`<i>1</i>` : html`<b>1</b>`)),
+      )}<footer>KEPT</footer>`,
+      document.body,
+    );
+    expect(document.body.innerHTML).toBe('<i>1</i><footer>KEPT</footer>');
+
+    mode.update(false);
+    await Promise.resolve();
+    expect(document.body.innerHTML).toBe('<b>1</b><footer>KEPT</footer>');
+
+    dispose();
+    expect(document.body.innerHTML).toBe('');
+  });
+
+  it('nests lists', () => {
+    render(
+      list([1, 2], (n) => list([n, n], (m) => text(String(m)))),
+      document.body,
+    );
+    expect(document.body.innerHTML).toBe('1122');
+  });
 });
 ```
 
@@ -123,12 +169,22 @@ Expected: FAIL — `list` is not exported from `..` (import/type error).
 - [ ] **Step 3: Create `src/list.ts`**
 
 ```ts
-import {type AnyView, toBoundary, type View} from './core';
+import {type AnyView, at, type View} from './core';
 
 export const list = <T>(
   items: readonly T[],
   viewFn: (item: T, index: number) => AnyView,
 ): View => {
+  if (items.length === 0) {
+    const empty = document.createComment('empty-list');
+    return {
+      type: 'view',
+      node: empty,
+      boundary: () => ({start: empty, end: empty}),
+      cleanBinds: () => {},
+    };
+  }
+
   const frag = document.createDocumentFragment();
   const views: AnyView[] = [];
 
@@ -138,21 +194,21 @@ export const list = <T>(
     frag.appendChild(view.node);
   });
 
-  if (items.length === 0) {
-    frag.appendChild(document.createComment('empty-list'));
-  }
-
-  // Compute the boundary before the fragment is inserted: inserting a fragment
-  // moves its children out and empties it, so a lazy toBoundary(frag) would
-  // throw E2 at dispose time.
-  const boundary = toBoundary(frag);
-
   return {
     type: 'view',
     node: frag,
-    boundary: () => boundary,
+    // Derive the boundary from the child views on demand: an edge view() can
+    // swap its root node, and a boundary captured at construction would point
+    // at the detached old node, leaking on teardown.
+    boundary: () => {
+      const first = at(views, 0);
+      const last = at(views, views.length - 1);
+      return {start: first.boundary().start, end: last.boundary().end};
+    },
     cleanBinds: () => {
-      views.forEach((view) => view.cleanBinds());
+      views.forEach((view) => {
+        view.cleanBinds();
+      });
     },
   };
 };
@@ -176,7 +232,7 @@ export * from './view';
 - [ ] **Step 5: Run the tests and typecheck**
 
 Run: `pnpm vitest run src/test/list.test.ts && pnpm typecheck`
-Expected: PASS. All 7 `list` cases pass and there are no type errors.
+Expected: PASS. All 10 `list` cases pass and there are no type errors.
 
 - [ ] **Step 6: Commit**
 

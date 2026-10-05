@@ -43,26 +43,32 @@ export const list = <T>(
 
 ### Construction
 
-`list` maps `items` in order, calling `viewFn(item, index)` for each and
-appending `.node` to a `DocumentFragment`. This mirrors `repeat`'s `_init`, minus
-keys and tracks. The result is a `View`:
+For a non-empty `items`, `list` maps it in order, calling `viewFn(item, index)`
+for each and appending `.node` to a `DocumentFragment`. This mirrors `repeat`'s
+`_init`, minus keys and tracks. The result is a `View`:
 
 - `node`: the `DocumentFragment`;
-- `boundary: () => boundary`, where `boundary` is `toBoundary(frag)` computed
-  **before** the fragment is inserted (insertion empties the fragment, so a lazy
-  `toBoundary(frag)` would later throw `E2`);
+- `boundary`: derived lazily from the generated views, returning
+  `{start: first.boundary().start, end: last.boundary().end}`. It is recomputed
+  on each call rather than captured at construction, because an edge `view()` can
+  swap its root node; a captured boundary would point at the detached old node
+  and leak nodes on teardown;
 - `cleanBinds`: calls `cleanBinds()` on every generated child view.
 
 The generated views are kept in a local array so teardown is complete and no new
 data structure is introduced. `list` creates no bind of its own, so it needs no
 `RepeatContext`-style object.
 
+For an empty `items`, `list` returns a `View` whose `node` is a single
+`<!--empty-list-->` comment and whose boundary is `{start: comment, end:
+comment}`; no fragment and no `viewFn` call are involved.
+
 ### Empty input
 
-An empty `items` produces a fragment containing a single `<!--empty-list-->`
-comment, matching `repeat([])`. This exists for two reasons: `toBoundary` throws
-`E2` on an empty fragment, and the placeholder keeps `list([])` renderable and
-distinguishable in the DOM. `viewFn` is never called for an empty array.
+An empty `items` returns a `View` whose `node` is a single `<!--empty-list-->`
+comment, matching `repeat([])`. The comment is the placeholder: it keeps
+`list([])` renderable and distinguishable in the DOM. `viewFn` is never called
+for an empty array.
 
 ### Reactivity
 
@@ -75,9 +81,9 @@ are unchanged.
 
 - In an `html` content position, `commitView` replaces the marker comment with
   the fragment, splicing the list's nodes into place.
-- As a `render` root, `render` appends the fragment and disposes via the
-  precomputed boundary; the boundary nodes are the fragment's first/last child
-  objects, which do not change when the fragment is inserted.
+- As a `render` root, `render` appends the fragment and disposes via the lazily
+  derived boundary, which keeps tracking the correct nodes when an edge `view()`
+  swaps its root node.
 - `list` does not set `children` on its `View`; like `repeat`, it manages
   teardown over its own array.
 
