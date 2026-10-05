@@ -77,4 +77,50 @@ describe('list', () => {
     await Promise.resolve();
     expect(document.body.innerHTML).toBe('1:b2:b');
   });
+
+  it('disposes nodes when an edge item swaps its node', async () => {
+    const mode = sig(true);
+    const dispose = render(
+      list([1, 2], (n) =>
+        n === 1
+          ? view(mode, (v) => (v ? html`<i>1</i>` : html`<b>1</b>`))
+          : text('2'),
+      ),
+      document.body,
+    );
+    expect(document.body.innerHTML).toBe('<i>1</i>2');
+
+    mode.update(false);
+    await Promise.resolve();
+    expect(document.body.innerHTML).toBe('<b>1</b>2');
+
+    dispose();
+    expect(document.body.innerHTML).toBe('');
+  });
+
+  it('disposes correctly when a list edge item swaps inside html', async () => {
+    const mode = sig(true);
+    const dispose = render(
+      html`${list([1], () =>
+        view(mode, (v) => (v ? html`<i>1</i>` : html`<b>1</b>`)),
+      )}<footer>KEPT</footer>`,
+      document.body,
+    );
+    expect(document.body.innerHTML).toBe('<i>1</i><footer>KEPT</footer>');
+
+    mode.update(false);
+    await Promise.resolve();
+    expect(document.body.innerHTML).toBe('<b>1</b><footer>KEPT</footer>');
+
+    dispose();
+    expect(document.body.innerHTML).toBe('');
+  });
+
+  it('nests lists', () => {
+    render(
+      list([1, 2], (n) => list([n, n], (m) => text(String(m)))),
+      document.body,
+    );
+    expect(document.body.innerHTML).toBe('1122');
+  });
 });
