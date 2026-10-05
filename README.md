@@ -439,13 +439,38 @@ Helper used by `view` and `repeat` to swap a mounted view: replaces an existing 
 #### `patch`
 
 ```ts
-const patch: (...toPatchItems: ToAnyPatchItem[]) => Patch;
+function patch(props: PatchProps, ...items: ToAnyPatchItem[]): Patch;
+function patch(...toPatchItems: ToAnyPatchItem[]): Patch;
 ```
 
 Declares one or more bindings to apply to the same element. Must be interpolated in an attribute position. Each command (`id`, `val`, `attr`, ...) receives either a plain value (applied once) or a `Sig` (applied on mount and re-applied on change).
 
 ```ts
 html`<input ${patch(val(name), attr(placeholder, 'name'))} />`;
+```
+
+The first argument may instead be a `PatchProps` object, which is desugared into the commands below in key order:
+
+| Props key | Command |
+| --- | --- |
+| `id` | `id` |
+| `val` | `val` |
+| `class` | `toggleClass` per entry |
+| `style` | `style` per entry |
+| `styleProp` | `styleProp` per entry |
+| `on` | `on` per entry |
+| any other | `attr` |
+
+Values may be plain or `Sig`. A key whose value is `undefined` is skipped. Arbitrary attributes are always set with `setAttribute(key, String(value))`; `patch({disabled: false})` sets `disabled="false"`.
+
+```ts
+html`<input ${patch({val: name, placeholder: 'name'})} />`;
+```
+
+A props object can be combined with commands; props are applied first, then the items:
+
+```ts
+html`<canvas ${patch({id: 'chart'}, act(frame, draw))}></canvas>`;
 ```
 
 #### `id`
@@ -573,6 +598,22 @@ interface Patch {
   type: 'patch';
   toPatchItems: ToAnyPatchItem[];
   cleanBinds: () => void;
+}
+```
+
+#### `PatchProps`
+
+```ts
+type Reactive<T> = T | Sig<T>;
+
+interface PatchProps {
+  id?: Reactive<string>;
+  val?: Reactive<string>;
+  class?: Record<string, Reactive<boolean>>;
+  style?: Partial<Record<WritableStyleKey, Reactive<string>>>;
+  styleProp?: Record<string, Reactive<string>>;
+  on?: {[K in keyof HTMLElementEventMap]?: (ev: HTMLElementEventMap[K]) => void};
+  [attr: string]: unknown;
 }
 ```
 
