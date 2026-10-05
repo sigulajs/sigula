@@ -138,12 +138,12 @@ export const toggleClasses = <T>(
   ...tokens: string[]
 ): ToPatchItem<T> => _toPatchItem(source, tokens, toggleClassesCmd);
 
-export type ActFn<T> = (node: Node, val?: T) => void;
+export type ActFn<T> = (elem: Element, val?: T) => void;
 
 const actCmd = <T>(val: T, ctx: PatchContext) => {
   const fn = ctx.extra?.[0] as ActFn<T> | undefined;
   if (!fn) err('E5');
-  fn(ctx.node, val);
+  fn(ctx.node as Element, val);
 };
 
 export const act = <T>(source: T | Sig<T>, fn: ActFn<T>): ToPatchItem<T> =>
