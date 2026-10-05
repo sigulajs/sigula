@@ -70,4 +70,38 @@ describe('frag', () => {
     dispose();
     expect(document.body.innerHTML).toBe('');
   });
+
+  it('keeps following siblings at the html leading edge across an edge swap', async () => {
+    const mode = sig(true);
+    const dispose = render(
+      html`${frag(
+        view(mode, (v) => (v ? html`<i>1</i>` : html`<b>1</b>`)),
+        text('x'),
+      )}<span>KEPT</span>`,
+      document.body,
+    );
+    expect(document.body.innerHTML).toBe('<i>1</i>x<span>KEPT</span>');
+
+    mode.update(false);
+    await Promise.resolve();
+    expect(document.body.innerHTML).toBe('<b>1</b>x<span>KEPT</span>');
+
+    dispose();
+    expect(document.body.innerHTML).toBe('');
+  });
+
+  it('cleans children when hidden inside a view', async () => {
+    const show = sig(true);
+    const s = sig('x');
+    render(
+      view(show, (v) => (v ? frag(text(s), text('-')) : text('off'))),
+      document.body,
+    );
+    expect(s.getBinds().length).toBe(1);
+
+    show.update(false);
+    await Promise.resolve();
+    expect(document.body.innerHTML).toBe('off');
+    expect(s.getBinds().length).toBe(0);
+  });
 });

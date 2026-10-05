@@ -19,6 +19,9 @@ export const frag = (...views: AnyView[]): View => {
   return {
     type: 'view',
     node,
+    // Derive the boundary from the child views on demand: an edge view() can
+    // swap its root node, and a boundary captured at construction would point
+    // at the detached old node, leaking on teardown.
     boundary: () => {
       const first = at(views, 0);
       const last = at(views, views.length - 1);
