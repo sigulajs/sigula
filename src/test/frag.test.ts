@@ -104,4 +104,23 @@ describe('frag', () => {
     expect(document.body.innerHTML).toBe('off');
     expect(s.getBinds().length).toBe(0);
   });
+
+  it('disposes nodes when the last edge view swaps its node', async () => {
+    const mode = sig(true);
+    const dispose = render(
+      frag(
+        text('1'),
+        view(mode, (v) => (v ? html`<i>2</i>` : html`<b>2</b>`)),
+      ),
+      document.body,
+    );
+    expect(document.body.innerHTML).toBe('1<i>2</i>');
+
+    mode.update(false);
+    await Promise.resolve();
+    expect(document.body.innerHTML).toBe('1<b>2</b>');
+
+    dispose();
+    expect(document.body.innerHTML).toBe('');
+  });
 });
