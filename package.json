@@ -12,6 +12,7 @@
   },
   "scripts": {
     "build": "tsdown",
+    "docs:api": "pnpm build && tsx scripts/gen-reference.ts",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
