@@ -194,7 +194,7 @@ count.notify();           // re-run dependents without changing the value
 | `notify()` | Re-run dependents against the current value. Use after mutating a held object/array **in place**. |
 | `addBind` / `removeBind` / `getBinds` | Low-level binding management; prefer `createBind` or the template APIs. |
 
-**Equality is deep by default.** `update` compares with `eq`, a structural comparator covering primitives, arrays, `Date`, `RegExp`, `Map`, `Set` and plain objects, and delegating to `a.equals(b)` when the value implements `Equatable`. Replacing `{a: 1}` with another `{a: 1}` is therefore a no-op. Values with different prototypes are never equal. `new Sig(v, {eq})` accepts a custom comparator.
+**Equality is deep by default.** `update` compares with `eq`, a structural comparator covering primitives, arrays, `Date`, `RegExp`, `Map`, `Set` and plain objects, and delegating to `a.equals(b)` when the value implements `Equatable`. Replacing `{a: 1}` with another `{a: 1}` is therefore a no-op. Values with different prototypes are never equal. `sig(v, {eq})` accepts a custom comparator.
 
 **In-place mutation needs `notify()`.** Sigula does not proxy your objects. If you mutate a held array or object instead of replacing it, the value identity never changes and `update` cannot see it:
 
@@ -404,7 +404,7 @@ sig.update(1); sig.update(2); sig.update(3);  // each dependent binding runs ONC
 
 | Export | Kind | Returns |
 | --- | --- | --- |
-| `sig(v)` | state | `Sig<T>` |
+| `sig(v, opts?)` | state | `Sig<T>` |
 | `compute(sig, fn)` / `compute(record, fn)` | derived | `DerivedSig<T>` |
 | `html\`…\`` | template | `View` |
 | `text(source)` | template | `View` (escaped text node) |

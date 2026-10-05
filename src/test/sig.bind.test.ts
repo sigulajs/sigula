@@ -374,3 +374,49 @@ describe('Sig.notify', () => {
     expect(lens).toEqual([0, 1]);
   });
 });
+
+describe('Sig custom comparator', () => {
+  it('uses the opts.eq comparator for update', async () => {
+    const caseInsensitive = (a: string, b: string) =>
+      a.toLowerCase() === b.toLowerCase();
+    const s = sig<string>('A', {eq: caseInsensitive});
+    let runs = 0;
+    createBind(s, {}, () => {
+      runs++;
+    });
+
+    s.update('a');
+    await flush();
+    expect(runs).toBe(0);
+    expect(s.get()).toBe('A');
+
+    s.update('b');
+    await flush();
+    expect(runs).toBe(1);
+    expect(s.get()).toBe('b');
+  });
+
+  it('applies the comparator through trans', () => {
+    const abs = (a: number, b: number) => Math.abs(a) === Math.abs(b);
+    const s = sig<number>(1, {eq: abs});
+
+    s.trans(() => -1);
+    expect(s.get()).toBe(1);
+
+    s.trans(() => 2);
+    expect(s.get()).toBe(2);
+  });
+
+  it('defaults to deep equality when opts is omitted', async () => {
+    const s = sig({a: 1});
+    let runs = 0;
+    createBind(s, {}, () => {
+      runs++;
+    });
+
+    s.update({a: 1});
+    await flush();
+    expect(runs).toBe(0);
+    expect(s.get()).toEqual({a: 1});
+  });
+});

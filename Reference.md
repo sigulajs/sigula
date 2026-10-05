@@ -138,7 +138,7 @@ again.
 ### `sig`
 
 ```ts
-const sig: <T>(v: T) => Sig<T>;
+const sig: <T>(v: T, opts?: { eq?: Eq<T>; }) => Sig<T>;
 ```
 
 Creates a writable signal holding `v`.
@@ -146,6 +146,7 @@ Creates a writable signal holding `v`.
 **Parameters**
 
 - `v` — the initial value.
+- `opts` — optional settings; `eq` overrides the comparator used by `update`.
 
 **Returns** a new `Sig` for `v`.
 

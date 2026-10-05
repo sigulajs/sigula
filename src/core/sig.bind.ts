@@ -219,6 +219,7 @@ export class DerivedSig<T> extends Sig<T> {
  * Creates a writable signal holding `v`.
  *
  * @param v - the initial value.
+ * @param opts - optional settings; `eq` overrides the comparator used by `update`.
  * @returns a new `Sig` for `v`.
  * @example
  * ```ts
@@ -228,7 +229,7 @@ export class DerivedSig<T> extends Sig<T> {
  * ```
  * @group Reactivity
  */
-export const sig = <T>(v: T) => new Sig(v);
+export const sig = <T>(v: T, opts?: {eq?: Eq<T>}) => new Sig(v, opts);
 
 /**
  * Detaches a binding and marks it removed so queued runs are skipped.

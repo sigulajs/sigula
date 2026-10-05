@@ -110,7 +110,7 @@ const parseSymbol = (docText: string, declLines: string[]): ApiSymbol => {
   const signature =
     isBlock && brace !== -1
       ? `${stripPrefix(full.slice(0, brace).trimEnd())} { ... }`
-      : stripPrefix(first).trim();
+      : stripPrefix(full).replace(/\s+/g, ' ').trim();
 
   const members: Member[] = [];
   if (isBlock) {
@@ -166,21 +166,39 @@ const collected: ApiSymbol[] = [];
 const gatherDeclaration = (start: number): {decl: string[]; next: number} => {
   const first = lines[start] as string;
   const decl: string[] = [first];
-  if (!isBlockStart(first) || !first.includes('{')) {
-    return {decl, next: start + 1};
+  if (isBlockStart(first) && first.includes('{')) {
+    // a one-line block such as `export interface Empty {}`
+    if (/\{\s*\}\s*;?\s*$/.test(first)) {
+      return {decl, next: start + 1};
+    }
+    let j = start;
+    while (j + 1 < lines.length) {
+      j++;
+      decl.push(lines[j] as string);
+      if (/^\}\s*;?\s*$/.test(lines[j] as string)) break;
+    }
+    if (!/^\}\s*;?\s*$/.test((lines[j] as string) ?? '')) {
+      throw new Error(`unterminated block starting at line ${start + 1}`);
+    }
+    return {decl, next: j + 1};
   }
-  // a one-line block such as `export interface Empty {}`
-  if (/\{\s*\}\s*;?\s*$/.test(first)) {
-    return {decl, next: start + 1};
-  }
+  // A non-block declaration may still wrap across lines (for example a const
+  // whose type is an object literal). Consume lines until the accumulated text
+  // is bracket-balanced and ends with `;`.
+  const balanced = (text: string): boolean => {
+    let depth = 0;
+    for (const ch of text) {
+      if (ch === '(' || ch === '{' || ch === '[') depth++;
+      else if (ch === ')' || ch === '}' || ch === ']') depth--;
+    }
+    return depth <= 0;
+  };
   let j = start;
   while (j + 1 < lines.length) {
+    const text = decl.join('\n');
+    if (balanced(text) && /;\s*$/.test(text)) break;
     j++;
     decl.push(lines[j] as string);
-    if (/^\}\s*;?\s*$/.test(lines[j] as string)) break;
-  }
-  if (!/^\}\s*;?\s*$/.test((lines[j] as string) ?? '')) {
-    throw new Error(`unterminated block starting at line ${start + 1}`);
   }
   return {decl, next: j + 1};
 };
