@@ -40,6 +40,9 @@ interface ApiSymbol {
 const stripPrefix = (s: string): string =>
   s.replace(/^export declare /, '').replace(/^export /, '');
 
+const cleanInline = (s: string): string =>
+  s.replace(/\{@link\s+([\w.$]+)\s*\}/g, '`$1`');
+
 const isBlockStart = (line: string): boolean =>
   /^export (?:declare )?(interface|class)\b/.test(line) ||
   /^export (?:declare )?type\b.*=\s*\{\s*$/.test(line);
@@ -68,16 +71,16 @@ const parseJsDoc = (text: string): {summary: string; tags: Tag[]} => {
   }
 
   return {
-    summary: summaryLines.join('\n').trim(),
-    tags: tags.map((t) => ({name: t.name, text: t.text.trim()})),
+    summary: cleanInline(summaryLines.join('\n').trim()),
+    tags: tags.map((t) => ({name: t.name, text: cleanInline(t.text.trim())})),
   };
 };
 
 const memberName = (decl: string): string => {
   const s = decl.trim();
   if (s.startsWith('[')) {
-    const colon = s.indexOf(':');
-    return colon === -1 ? s : s.slice(0, colon).trim();
+    const end = s.indexOf(']');
+    return end === -1 ? s : s.slice(0, end + 1);
   }
   return /^([A-Za-z_$][\w$]*)/.exec(s)?.[1] ?? s;
 };

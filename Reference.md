@@ -86,7 +86,7 @@ runs when the signal changes.
 type AnyBind = Bind<any, any>;
 ```
 
-A {@link Bind} with erased value and context types.
+A `Bind` with erased value and context types.
 
 ### `Sig`
 
@@ -120,7 +120,7 @@ when it changes; writes are queued and coalesced in a microtask.
 class DerivedSig<T> extends Sig<T> { ... }
 ```
 
-A `Sig` produced by {@link compute}. Extends `Sig` and additionally tracks the
+A `Sig` produced by `compute`. Extends `Sig` and additionally tracks the
 source bindings that feed it: it detaches from its sources when it loses its
 last consumer, and re-links and recomputes once when a consumer is added
 again.
@@ -214,11 +214,11 @@ interface SigRecord { ... }
 ```
 
 A record whose values are signals, used by the record overload of
-{@link compute}.
+`compute`.
 
 **Members**
 
-- `[key` — Each key maps to a signal of any value type.
+- `[key: string]` — Each key maps to a signal of any value type.
 
 ### `ValRecord`
 
@@ -226,7 +226,7 @@ A record whose values are signals, used by the record overload of
 type ValRecord<K extends SigRecord> = { [P in keyof K]: K[P] extends Sig<infer U> ? U : never; };
 ```
 
-Maps a {@link SigRecord} to a record of the signals' values.
+Maps a `SigRecord` to a record of the signals' values.
 
 **Type parameters**
 
@@ -300,7 +300,7 @@ The unit returned by `html`, `text`, `raw`, `view`, `repeat`, `list`, and
 type AnyView = View<any, any>;
 ```
 
-A {@link View} with erased value and context types.
+A `View` with erased value and context types.
 
 ### `ViewContext`
 
@@ -340,7 +340,7 @@ Replaces an existing boundary with a view's node and returns the new boundary.
 const html: (strs: TemplateStringsArray, ...rawItems: HtmlItem[]) => View;
 ```
 
-Tagged template that parses native HTML and returns a {@link View}. Three
+Tagged template that parses native HTML and returns a `View`. Three
 kinds of interpolation are supported:
 
 - a `View` fills a content position;
@@ -425,7 +425,7 @@ interface Patch { ... }
 ```
 
 A collection of deferred bindings to apply to one element, produced by
-{@link patch}.
+`patch`.
 
 **Members**
 
@@ -482,7 +482,7 @@ A factory that defers reading the target element until mount.
 type AnyPatchItem = PatchItem<any>;
 ```
 
-A {@link PatchItem} with an erased value type.
+A `PatchItem` with an erased value type.
 
 ### `ToAnyPatchItem`
 
@@ -490,7 +490,7 @@ A {@link PatchItem} with an erased value type.
 type ToAnyPatchItem = (el: Element) => AnyPatchItem;
 ```
 
-A {@link ToPatchItem} with an erased value type.
+A `ToPatchItem` with an erased value type.
 
 ### `PatchProps`
 
@@ -498,7 +498,7 @@ A {@link ToPatchItem} with an erased value type.
 interface PatchProps { ... }
 ```
 
-Object form for {@link patch}, desugared into commands in key order:
+Object form for `patch`, desugared into commands in key order:
 `id`, `val`, `class` (per entry, via `toggleClass`), `style` (per entry,
 via `style`), `styleProp` (per entry), `on` (per entry), and any other key
 via `attr`. A key whose value is `undefined` is skipped.
@@ -511,7 +511,7 @@ via `attr`. A key whose value is `undefined` is skipped.
 - `style` — Sets inline style properties by typed name.
 - `styleProp` — Sets style properties via `setProperty` (custom properties, untyped names).
 - `on` — Registers DOM event listeners.
-- `[attr` — Any other key is set as an attribute via `attr`.
+- `[attr: string]` — Any other key is set as an attribute via `attr`.
 
 ### `patch`
 
@@ -524,7 +524,7 @@ Declares one or more bindings to apply to the same element; must be
 interpolated in an attribute position. Each command receives a plain value
 (applied once) or a `Sig` (applied on mount and re-applied on change).
 
-The first argument may be a {@link PatchProps} object, desugared into the
+The first argument may be a `PatchProps` object, desugared into the
 commands below in key order, optionally followed by command items.
 
 **Parameters**
@@ -811,7 +811,7 @@ html`<ul>${list(items, (item, i) => html`<li>${i}: ${text(item)}</li>`)}</ul>`;
 type RepeatProp<T> = { ... }
 ```
 
-Options for {@link repeat}.
+Options for `repeat`.
 
 **Type parameters**
 
@@ -973,7 +973,7 @@ Removes every node in the boundary. No-op if the boundary has no parent.
 const toBoundary: (node: Node) => Boundary;
 ```
 
-Wraps a node in a {@link Boundary}. A `DocumentFragment` spans its first and
+Wraps a node in a `Boundary`. A `DocumentFragment` spans its first and
 last child; any other node covers itself. Throws `E2` on an empty fragment.
 
 **Parameters**
@@ -1008,7 +1008,7 @@ Base type for command contexts: an arbitrary string-keyed record.
 
 **Members**
 
-- `[key` — Any string key; values are unconstrained.
+- `[key: string]` — Any string key; values are unconstrained.
 
 ### `Cmd`
 
@@ -1029,7 +1029,7 @@ The unit of work a binding runs: it receives the current value and context.
 type AnyCmd = Cmd<any, any>;
 ```
 
-A {@link Cmd} with erased value and context types.
+A `Cmd` with erased value and context types.
 
 ### `err`
 
