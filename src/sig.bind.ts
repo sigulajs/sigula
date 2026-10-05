@@ -72,16 +72,19 @@ class Queue {
 
 const QUEUE = new Queue();
 
+type EqFn<T> = (a: T, b: T) => boolean;
 export class Sig<T> implements Equatable {
   private _val: T;
   private _binds: AnyBind[] = [];
+  private _eqFn: EqFn<T>;
 
-  constructor(val: T) {
+  constructor(val: T, opts?: {isEqual?: EqFn<T>}) {
     this._val = val;
+    this._eqFn = opts?.isEqual ?? isEqual;
   }
 
   equals(b: unknown) {
-    if (b instanceof Sig) return isEqual(this.get(), b.get());
+    if (b instanceof Sig) return this._eqFn(this.get(), b.get());
     return false;
   }
 

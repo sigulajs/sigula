@@ -15,7 +15,7 @@ import {type AnyView, replaceWithView, type View} from './view';
 export type RepeatProp<T> = {
   key: (item: T) => string;
   view: (item: T) => AnyView;
-  compare?: (a: T, b: T) => boolean;
+  isEqual?: (a: T, b: T) => boolean;
 };
 
 interface Container {
@@ -68,7 +68,7 @@ const repeatCmd = <T>(items: T[], ctx: RepeatContext<T>) => {
   const parent = start.parentNode;
   if (!parent) err('E7');
 
-  const compare = ctx.prop.compare ?? isEqual;
+  const compare = ctx.prop.isEqual ?? isEqual;
   const newKeys = items.map((item) => ctx.prop.key(item));
   const tracks = ctx.tracks;
 
