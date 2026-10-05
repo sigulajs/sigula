@@ -321,6 +321,22 @@ describe('Sig.notify', () => {
     expect(count.get()).toBe(1);
   });
 
+  it('schedules a derived signal consumer', async () => {
+    const source = sig(1);
+    const doubled = compute(source, (v) => v * 2);
+
+    const seen: number[] = [];
+    createBind(doubled, {}, (v: number) => {
+      seen.push(v);
+    });
+
+    doubled.notify();
+    await flush();
+
+    expect(seen).toEqual([2]);
+    expect(doubled.get()).toBe(2);
+  });
+
   it('is a no-op with no bindings', () => {
     const s = sig(0);
     expect(() => s.notify()).not.toThrow();
