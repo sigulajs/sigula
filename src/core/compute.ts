@@ -1,11 +1,23 @@
 import type {CmdContext} from './cmd';
 import {createBind, DerivedSig, Sig} from './sig.bind';
 
+/**
+ * A record whose values are signals, used by the record overload of
+ * {@link compute}.
+ *
+ * @group Reactivity
+ */
 export interface SigRecord {
   // biome-ignore lint/suspicious/noExplicitAny: any sig val
   [key: string]: Sig<any>;
 }
 
+/**
+ * Maps a {@link SigRecord} to a record of the signals' values.
+ *
+ * @typeParam K - the signal record type.
+ * @group Reactivity
+ */
 export type ValRecord<K extends SigRecord> = {
   [P in keyof K]: K[P] extends Sig<infer U> ? U : never;
 };
@@ -66,7 +78,38 @@ const _computeRecord = <S extends SigRecord, T>(
   return target;
 };
 
+/**
+ * Derives a signal from one source signal. The result recomputes whenever
+ * `source` changes.
+ *
+ * @typeParam S - the source value type.
+ * @typeParam T - the derived value type.
+ * @param source - the source signal.
+ * @param fn - maps the source value to the derived value.
+ * @returns a `DerivedSig` for the mapped value.
+ * @example
+ * ```ts
+ * const x = sig(1);
+ * const doubled = compute(x, (v) => v * 2);
+ * ```
+ * @group Reactivity
+ */
 export function compute<S, T>(source: Sig<S>, fn: (v: S) => T): DerivedSig<T>;
+/**
+ * Derives a signal from a record of signals; `fn` receives the matching record
+ * of values. The result recomputes whenever any source changes.
+ *
+ * @typeParam S - the signal record type.
+ * @typeParam T - the derived value type.
+ * @param source - a record of signals.
+ * @param fn - maps the record of values to the derived value.
+ * @returns a `DerivedSig` for the mapped value.
+ * @example
+ * ```ts
+ * const sum = compute({x, y}, (v) => v.x + v.y);
+ * ```
+ * @group Reactivity
+ */
 export function compute<S extends SigRecord, T>(
   source: S,
   fn: (v: ValRecord<S>) => T,

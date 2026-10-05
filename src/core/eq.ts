@@ -1,7 +1,19 @@
+/**
+ * Implement this on a value type to give `eq` custom equality semantics.
+ *
+ * @group Reactivity
+ */
 export interface Equatable {
+  /** Returns whether `this` and `other` are equal. */
   equals(other: unknown): boolean;
 }
 
+/**
+ * A value equality function.
+ *
+ * @typeParam T - the value type.
+ * @group Reactivity
+ */
 export type Eq<T> = (a: T, b: T) => boolean;
 
 const isEquatable = (value: unknown): value is Equatable =>
@@ -10,8 +22,25 @@ const isEquatable = (value: unknown): value is Equatable =>
   'equals' in value &&
   typeof value.equals === 'function';
 
+/**
+ * Convenience alias for an arbitrary string-keyed object.
+ *
+ * @group Reactivity
+ */
 export type UnknownRecord = Record<string, unknown>;
 
+/**
+ * Deep structural equality. Compares primitives, arrays, `Date`, `RegExp`,
+ * `Map`, `Set`, and plain objects, and defers to `a.equals(b)` when `a`
+ * implements `Equatable`. This is the default comparator for `Sig.update` and
+ * `repeat`. Values with different prototypes are never equal.
+ *
+ * @typeParam T - the value type.
+ * @param a - the first value.
+ * @param b - the second value.
+ * @returns `true` when `a` and `b` are deeply equal.
+ * @group Reactivity
+ */
 export const eq = <T>(a: T, b: T): boolean => {
   if (a === b) return true;
   if (typeof a !== typeof b) return false;
