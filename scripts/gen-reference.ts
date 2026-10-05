@@ -166,13 +166,21 @@ const collected: ApiSymbol[] = [];
 const gatherDeclaration = (start: number): {decl: string[]; next: number} => {
   const first = lines[start] as string;
   const decl: string[] = [first];
-  if (!isBlockStart(first)) {
+  if (!isBlockStart(first) || !first.includes('{')) {
+    return {decl, next: start + 1};
+  }
+  // a one-line block such as `export interface Empty {}`
+  if (/\{\s*\}\s*;?\s*$/.test(first)) {
     return {decl, next: start + 1};
   }
   let j = start;
-  while (!/^\}\s*;?\s*$/.test(lines[j] as string)) {
+  while (j + 1 < lines.length) {
     j++;
     decl.push(lines[j] as string);
+    if (/^\}\s*;?\s*$/.test(lines[j] as string)) break;
+  }
+  if (!/^\}\s*;?\s*$/.test((lines[j] as string) ?? '')) {
+    throw new Error(`unterminated block starting at line ${start + 1}`);
   }
   return {decl, next: j + 1};
 };
@@ -195,8 +203,15 @@ while (i < lines.length) {
       docLines.push(lines[i] as string);
     }
     i++;
-    if (i < lines.length && (lines[i] as string).startsWith('export ')) {
-      const {decl, next} = gatherDeclaration(i);
+    let k = i;
+    while (
+      k < lines.length &&
+      ((lines[k] as string).trim() === '' || (lines[k] as string).trim().startsWith('//'))
+    ) {
+      k++;
+    }
+    if (k < lines.length && (lines[k] as string).startsWith('export ')) {
+      const {decl, next} = gatherDeclaration(k);
       collected.push(parseSymbol(docLines.join('\n'), decl));
       i = next;
     }
@@ -221,6 +236,9 @@ for (const s of collected) {
 const grouped = new Map<string, ApiSymbol[]>();
 for (const s of byName.values()) {
   const g = GROUP_ORDER.includes(s.group) ? s.group : 'Other';
+  if (g === 'Other') {
+    console.warn(`gen-reference: unknown @group "${s.group}" for ${s.name}`);
+  }
   const bucket = grouped.get(g);
   if (bucket) bucket.push(s);
   else grouped.set(g, [s]);
