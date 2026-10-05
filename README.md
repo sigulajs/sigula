@@ -160,8 +160,8 @@ const Todos = (): View => {
         ${patch(
           on('click', () => item.done.trans((v) => !v)),
           style(
-            compute(item.done, (v): string => (v ? 'line-through' : 'none')),
             'textDecoration',
+            compute(item.done, (v): string => (v ? 'line-through' : 'none')),
           ),
         )}
       >${text(item.text)}</span>
@@ -462,7 +462,7 @@ function patch(...toPatchItems: ToAnyPatchItem[]): Patch;
 Declares one or more bindings to apply to the same element. Must be interpolated in an attribute position. Each command (`id`, `val`, `attr`, ...) receives either a plain value (applied once) or a `Sig` (applied on mount and re-applied on change).
 
 ```ts
-html`<input ${patch(val(name), attr(placeholder, 'name'))} />`;
+html`<input ${patch(val(name), attr('name', placeholder))} />`;
 ```
 
 The first argument may instead be a `PatchProps` object, which is desugared into the commands below in key order:
@@ -508,7 +508,7 @@ Sets the element's `value` property (form controls).
 #### `attr`
 
 ```ts
-const attr: <T>(source: T | Sig<T>, key: string) => ToPatchItem<T>;
+const attr: <T>(key: string, source: T | Sig<T>) => ToPatchItem<T>;
 ```
 
 Sets attribute `key`. Use this for boolean/ARIA/data attributes.
@@ -517,15 +517,15 @@ Sets attribute `key`. Use this for boolean/ARIA/data attributes.
 
 ```ts
 const style: <T>(
-  source: T | Sig<T>,
   key: WritableStyleKey,
+  source: T | Sig<T>,
 ) => ToPatchItem<T>;
 ```
 
 Sets an inline style property by typed name.
 
 ```ts
-html`<span ${patch(style(color, 'color'))}>text</span>`;
+html`<span ${patch(style('color', color))}>text</span>`;
 ```
 
 `WritableStyleKey` is the union of `CSSStyleDeclaration` keys whose values are strings.
@@ -533,19 +533,19 @@ html`<span ${patch(style(color, 'color'))}>text</span>`;
 #### `styleProp`
 
 ```ts
-const styleProp: <T>(source: T | Sig<T>, key: string) => ToPatchItem<T>;
+const styleProp: <T>(key: string, source: T | Sig<T>) => ToPatchItem<T>;
 ```
 
 Sets a style property via `CSSStyleDeclaration.setProperty`. Use this for custom properties (`--my-var`) or untyped names.
 
 ```ts
-html`<div ${patch(styleProp(size, '--size'))}></div>`;
+html`<div ${patch(styleProp('--size', size))}></div>`;
 ```
 
 #### `toggleClass`
 
 ```ts
-const toggleClass: <T>(source: T | Sig<T>, token: string) => ToPatchItem<T>;
+const toggleClass: <T>(token: string, source: T | Sig<T>) => ToPatchItem<T>;
 ```
 
 Toggles a single class from the truthiness of the value.
@@ -554,8 +554,8 @@ Toggles a single class from the truthiness of the value.
 
 ```ts
 const toggleClasses: <T>(
+  tokens: readonly string[],
   source: T | Sig<T>,
-  ...tokens: string[]
 ) => ToPatchItem<T>;
 ```
 
