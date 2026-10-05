@@ -79,10 +79,15 @@ Normalization happens once, at the top of `html`, before the template cache is
 consulted and before `_shape`, `_text`, and `_scan` run:
 
 ```ts
-const items = rawItems.map((item) =>
-  isPatch(item) || isView(item) ? item : text(item as never),
-);
+const toItem = (item: unknown): Patch | AnyView =>
+  isPatch(item) || isView(item) ? item : text(item);
+
+const items = rawItems.map(toItem);
 ```
+
+The helper's parameter is `unknown` so the `else` branch calls `text` with a
+value typed `unknown`; `text`'s generic infers `T = unknown` and accepts it
+without a cast.
 
 `text(item)` is the single source of truth for turning a value into a view: it
 creates a text node, binds reactively when `item` is a `Sig`, and stringifies the
