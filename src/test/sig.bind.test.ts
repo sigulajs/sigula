@@ -278,3 +278,66 @@ describe('DerivedSig re-arm', () => {
     dispose();
   });
 });
+
+describe('Sig.notify', () => {
+  it('runs dependents without changing the value', async () => {
+    const s = sig(1);
+    const seen: number[] = [];
+    createBind(s, {}, (v: number) => {
+      seen.push(v);
+    });
+
+    s.notify();
+    await flush();
+
+    expect(seen).toEqual([1]);
+    expect(s.get()).toBe(1);
+  });
+
+  it('coalesces multiple notifies into one run per bind', async () => {
+    const s = sig('x');
+    let runs = 0;
+    createBind(s, {}, () => {
+      runs++;
+    });
+
+    s.notify();
+    s.notify();
+    s.notify();
+    await flush();
+
+    expect(runs).toBe(1);
+  });
+
+  it('recomputes a derived signal', async () => {
+    const items = sig<number[]>([]);
+    const count = compute(items, (v) => v.length);
+    expect(count.get()).toBe(0);
+
+    items.get().push(1);
+    items.notify();
+    await flush();
+
+    expect(count.get()).toBe(1);
+  });
+
+  it('is a no-op with no bindings', () => {
+    const s = sig(0);
+    expect(() => s.notify()).not.toThrow();
+    expect(s.getBinds().length).toBe(0);
+  });
+
+  it('forceUpdate still sets the value and notifies', async () => {
+    const s = sig(1);
+    const seen: number[] = [];
+    createBind(s, {}, (v: number) => {
+      seen.push(v);
+    });
+
+    s.forceUpdate(2);
+    await flush();
+
+    expect(s.get()).toBe(2);
+    expect(seen).toEqual([2]);
+  });
+});

@@ -91,9 +91,13 @@ export class Sig<T> implements Equatable {
     return this._val;
   }
 
+  notify() {
+    QUEUE.addAll(this._binds);
+  }
+
   forceUpdate(v: T) {
     this._val = v;
-    QUEUE.addAll(this._binds);
+    this.notify();
   }
 
   update(v: T) {
