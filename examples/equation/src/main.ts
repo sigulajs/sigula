@@ -27,16 +27,16 @@ const Equation = (): View => {
         <button ${patch(on('click', () => y.trans((v) => v + 1)))}>+1</button>
         <button ${patch(on('click', () => y.trans((v) => v - 1)))}>-1</button>
       </p>
-      <p>sum: x + y = ${text(x)} + ${text(y)} = ${text(sum)}</p>
-      <p>difference: x - y = ${text(x)} - ${text(y)} = ${text(diff)}</p>
-      <p>product: x * y = ${text(x)} * ${text(y)} = ${text(product)}</p>
-      <p>quotient: x / y = ${text(x)} / ${text(y)} = ${text(quotient)}</p>
+      <p>sum: x + y = ${x} + ${y} = ${sum}</p>
+      <p>difference: x - y = ${x} - ${y} = ${diff}</p>
+      <p>product: x * y = ${x} * ${y} = ${product}</p>
+      <p>quotient: x / y = ${x} / ${y} = ${quotient}</p>
       <p>
         (x + y)(x - y) 
-          = (${text(x)} + ${text(y)})(${text(x)} - ${text(y)}) 
-          = ${text(sum)}*${text(diff)} = ${text(sumDiffProduct)}
+          = (${x} + ${y})(${x} - ${y}) 
+          = ${sum} * ${diff} = ${sumDiffProduct}
         <br />
-        = x^2 - y^2 = ${text(xSquare)} - ${text(ySquare)} = ${text(squareDiff)}
+        = x^2 - y^2 = ${xSquare} - ${ySquare} = ${squareDiff}
       </p>
     </div>
   </div>`;

@@ -57,13 +57,16 @@ const Todos = (): View => {
   const itemView = (item: Todo) => html`<li>
       <span
         ${patch(
-          on('click', () => item.done.trans((v) => !v)),
+          on('click', () => {
+            item.done.trans((v) => !v);
+            todos.notify();
+          }),
           style(
-            compute(item.done, (v): string => (v ? 'line-through' : 'none')),
             'textDecoration',
+            compute(item.done, (v): string => (v ? 'line-through' : 'none')),
           ),
         )}
-      >${text(item.text)}</span>
+      >${item.text}</span>
       <button ${patch(on('click', () => remove(item.id)))}>x</button>
     </li>`;
 

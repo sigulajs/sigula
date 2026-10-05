@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       sigula:
-        specifier: 1.0.3
-        version: 1.0.3
+        specifier: ^2.0.0
+        version: 2.0.0
     devDependencies:
       '@biomejs/biome':
         specifier: 2.5.14
@@ -422,8 +422,8 @@ packages:
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
 
-  sigula@1.0.3:
-    resolution: {integrity: sha512-jWK/99RPFv2nD83Bhv3keoD/vXEv1631a3J+OVzc4PkLKTzZPEfybomJgLVxog0Iv4+buZXhDb27Q5yzzlqKLw==}
+  sigula@2.0.0:
+    resolution: {integrity: sha512-7wlLE5Pps/FAurpsxd25GU6XfOCvXC+NYWDm0/jo06XDCCUYAbY0B/40UygH5KicZ9+wiykkEJAqUiH6GopKMg==}
     engines: {node: ^24.21.0, pnpm: ^12.8.1}
 
   source-map-js@1.2.2:
@@ -726,7 +726,7 @@ snapshots:
       '@rolldown/binding-win32-arm64-msvc': 1.2.12
       '@rolldown/binding-win32-x64-msvc': 1.2.12
 
-  sigula@1.0.3: {}
+  sigula@2.0.0: {}
 
   source-map-js@1.2.2: {}
 
