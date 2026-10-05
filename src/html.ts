@@ -139,6 +139,30 @@ const _scan = (
 type TextValue = string | number | boolean | bigint | null | undefined;
 type HtmlItem = Patch | AnyView | TextValue | Sig<any>;
 
+/**
+ * Tagged template that parses native HTML and returns a {@link View}. Three
+ * kinds of interpolation are supported:
+ *
+ * - a `View` fills a content position;
+ * - a `Patch` (from `patch(...)`) fills an attribute position;
+ * - a plain value or a `Sig` fills a content position as text — a `Sig` binds
+ *   reactively and any other value becomes `String(value)`.
+ *
+ * Templates are cached per call site, so repeated renders skip parsing. Throws
+ * `E10` for an empty template, `E11:<expected>:<got>` for an interpolation-count
+ * mismatch, and `E12` for an unmatched interpolation (a `patch` in content
+ * position, or a text value in an attribute position).
+ *
+ * @param strs - the static template strings.
+ * @param rawItems - the interpolated views, patches, or text values.
+ * @returns the parsed `View`.
+ * @example
+ * ```ts
+ * html`<p>Hello, ${name}!</p>`;
+ * html`<button ${patch(on('click', handler))}>Go</button>`;
+ * ```
+ * @group Templates
+ */
 export const html = (
   strs: TemplateStringsArray,
   ...rawItems: HtmlItem[]
