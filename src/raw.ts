@@ -16,13 +16,14 @@ interface RawContext extends CmdContext {
 // Parse trusted HTML through a detached <template>. Assigning innerHTML does
 // not run scripts, but the parsed nodes are later connected to the document, so
 // inline handlers and other vectors still apply and callers must sanitize
-// untrusted input. An empty string parses to no nodes; fall back to an empty
-// text node so the view always has a valid boundary anchor.
-const _parse = (source: string): Node => {
+// untrusted input. An empty string parses to no nodes; append an empty text
+// node so the fragment (and thus the boundary) always has a parent and anchor.
+const _parse = (source: string): DocumentFragment => {
   const template = document.createElement('template');
   template.innerHTML = source;
   const content = template.content;
-  return content.firstChild ? content : document.createTextNode('');
+  if (!content.firstChild) content.appendChild(document.createTextNode(''));
+  return content;
 };
 
 const rawCmd = (val: string, ctx: RawContext) => {
@@ -30,7 +31,7 @@ const rawCmd = (val: string, ctx: RawContext) => {
 };
 
 export const raw = (source: string | Sig<string>): AnyView => {
-  const node = _parse(String(source instanceof Sig ? source.get() : source));
+  const node = _parse(source instanceof Sig ? source.get() : source);
   const ctx: RawContext = {boundary: toBoundary(node)};
   const bind =
     source instanceof Sig ? createBind(source, ctx, rawCmd) : undefined;

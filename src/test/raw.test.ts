@@ -94,4 +94,31 @@ describe('raw', () => {
     expect(s.getBinds().length).toBe(0);
     expect(document.body.innerHTML).toBe('');
   });
+
+  it('applies a pre-mount update to an empty raw', async () => {
+    const s = sig('');
+    const view = raw(s);
+    s.update('<b>x</b>');
+    await Promise.resolve();
+    render(view, document.body);
+    expect(document.body.innerHTML).toBe('<b>x</b>');
+  });
+
+  it('handles a simple raw at the end edge going empty', async () => {
+    const s = sig('<i>a</i>');
+    render(html`<span>KEPT</span>${raw(s)}`, document.body);
+    expect(document.body.innerHTML).toBe('<span>KEPT</span><i>a</i>');
+
+    s.update('');
+    await Promise.resolve();
+    expect(document.body.innerHTML).toBe('<span>KEPT</span>');
+  });
+
+  it('disposes a static raw without a bind', () => {
+    const dispose = render(raw('<b>a</b>'), document.body);
+    expect(document.body.innerHTML).toBe('<b>a</b>');
+
+    dispose();
+    expect(document.body.innerHTML).toBe('');
+  });
 });

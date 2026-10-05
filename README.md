@@ -419,7 +419,7 @@ html`<span>${text(count)}</span>`;
 const raw: (source: string | Sig<string>) => AnyView;
 ```
 
-Parses its value as HTML and mounts the resulting nodes. Unlike `text`, the value is **not** escaped, so only pass trusted HTML; sanitize untrusted input yourself. The parsed nodes are inserted directly with no wrapper element, and a `Sig` re-parses and replaces the content on change. An empty string renders nothing.
+Parses its value as HTML and mounts the resulting nodes. Unlike `text`, the value is **not** escaped, so only pass trusted HTML; sanitize untrusted input yourself (inline event handlers and similar still run when the nodes connect). The parsed nodes are inserted directly with no wrapper element, and a `Sig` re-parses and replaces the content on change. An empty string renders nothing.
 
 ```ts
 html`<article>${raw(post.bodyHtml)}</article>`;
