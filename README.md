@@ -387,7 +387,7 @@ const html: (strs: TemplateStringsArray, ...items: HtmlItem[]) => View;
 
 Tagged template that parses native HTML and returns a `View`. Three kinds of interpolation are supported:
 
-- a `View` (from `text`, `view`, `repeat`, `list`, or another `html`) fills a content position
+- a `View` (from `text`, `raw`, `view`, `repeat`, `list`, or another `html`) fills a content position
 - a `Patch` (from `patch(...)`) fills an attribute position
 - a plain value or a `Sig` fills a content position as text: a `Sig` binds reactively, and any other value becomes `String(value)`, so `null`, `undefined`, and `false` render as `"null"`, `"undefined"`, and `"false"`
 
@@ -413,6 +413,18 @@ Creates a text-node view. With a `Sig`, the text updates whenever the signal cha
 html`<span>${text(count)}</span>`;
 ```
 
+#### `raw`
+
+```ts
+const raw: (source: string | Sig<string>) => AnyView;
+```
+
+Parses its value as HTML and mounts the resulting nodes. Unlike `text`, the value is **not** escaped, so only pass trusted HTML; sanitize untrusted input yourself. The parsed nodes are inserted directly with no wrapper element, and a `Sig` re-parses and replaces the content on change. An empty string renders nothing.
+
+```ts
+html`<article>${raw(post.bodyHtml)}</article>`;
+```
+
 #### `View<T, C>` / `AnyView`
 
 ```ts
@@ -428,7 +440,7 @@ interface View<T = unknown, C extends CmdContext = any> {
 type AnyView = View<any, any>;
 ```
 
-`View` is the unit returned by `html`, `text`, `view`, `repeat`, and `list`. Its `node` is a DOM node or `DocumentFragment`. `boundary` returns the nodes the view currently occupies; `render` calls it at disposal time so a view that swaps its own contents (`view`, `repeat`) is torn down from its current nodes. `cleanBinds` detaches the view's bindings and, recursively, those of its `children`.
+`View` is the unit returned by `html`, `text`, `raw`, `view`, `repeat`, and `list`. Its `node` is a DOM node or `DocumentFragment`. `boundary` returns the nodes the view currently occupies; `render` calls it at disposal time so a view that swaps its own contents (`view`, `repeat`) is torn down from its current nodes. `cleanBinds` detaches the view's bindings and, recursively, those of its `children`.
 
 #### `replaceWithView`
 
