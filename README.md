@@ -379,21 +379,25 @@ type AnyBind = Bind<any, any>;
 #### `html`
 
 ```ts
-const html: (
-  strs: TemplateStringsArray,
-  ...items: (Patch | AnyView)[]
-) => View;
+type TextValue = string | number | boolean | bigint | null | undefined;
+type HtmlItem = Patch | AnyView | TextValue | Sig<any>;
+
+const html: (strs: TemplateStringsArray, ...items: HtmlItem[]) => View;
 ```
 
-Tagged template that parses native HTML and returns a `View`. Two kinds of interpolation are supported:
+Tagged template that parses native HTML and returns a `View`. Three kinds of interpolation are supported:
 
 - a `View` (from `text`, `view`, `repeat`, or another `html`) fills a content position
 - a `Patch` (from `patch(...)`) fills an attribute position
+- a plain value or a `Sig` fills a content position as text: a `Sig` binds reactively, and any other value becomes `String(value)`, so `null`, `undefined`, and `false` render as `"null"`, `"undefined"`, and `"false"`
 
 ```ts
 html`<p>${text(label)}</p>`;
+html`<p>Hello, ${name}!</p>`;
 html`<button ${patch(on('click', handler))}>Go</button>`;
 ```
+
+Text values are content-only; using one in an attribute position throws `E12`. Use `patch({...})` or `attr()` for attributes.
 
 Templates are cached per call site, so repeated renders skip parsing. Using `patch(...)` in a content position throws `E12`. An interpolation count that does not match the number of slots throws `E11:<expected>:<got>`; a mismatch means the cached template for that call site was built from a different mix of interpolations. See [Errors](#errors).
 
@@ -761,7 +765,7 @@ Look yours up here:
 | `E9` | `repeat` | There is no node after the fence to move before. |
 | `E10` | `html` | The template is empty (an empty tagged template). |
 | `E11:<expected>:<got>` | `html` | Interpolation count does not match the template's slots. |
-| `E12` | `html` | Unmatched interpolation; `patch()` must be in attribute position. |
+| `E12` | `html` | Unmatched interpolation; a `Patch` must be in an attribute position and a `View`/text value in a content position. |
 
 ### Reactivity model
 
