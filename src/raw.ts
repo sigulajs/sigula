@@ -13,9 +13,11 @@ interface RawContext extends CmdContext {
   boundary: Boundary;
 }
 
-// A detached <template> parses HTML into nodes without executing scripts.
-// An empty string parses to no nodes; fall back to an empty text node so the
-// view always has a valid boundary anchor.
+// Parse trusted HTML through a detached <template>. Scripts inserted this way
+// are inert, but inline handlers and other vectors still apply on connect, so
+// callers must sanitize untrusted input. An empty string parses to no nodes;
+// fall back to an empty text node so the view always has a valid boundary
+// anchor.
 const _parse = (source: string): Node => {
   const template = document.createElement('template');
   template.innerHTML = source;
@@ -23,8 +25,8 @@ const _parse = (source: string): Node => {
   return content.firstChild ? content : document.createTextNode('');
 };
 
-const rawCmd = (source: string, ctx: RawContext) => {
-  ctx.boundary = replaceWithNode(ctx.boundary, _parse(String(source)));
+const rawCmd = (val: string, ctx: RawContext) => {
+  ctx.boundary = replaceWithNode(ctx.boundary, _parse(val));
 };
 
 export const raw = (source: string | Sig<string>): AnyView => {
