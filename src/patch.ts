@@ -9,21 +9,64 @@ import {
   type ToPatchItem,
 } from './core';
 
+/**
+ * Object form for {@link patch}, desugared into commands in key order:
+ * `id`, `val`, `class` (per entry, via `toggleClass`), `style` (per entry,
+ * via `style`), `styleProp` (per entry), `on` (per entry), and any other key
+ * via `attr`. A key whose value is `undefined` is skipped.
+ *
+ * @group DOM bindings
+ */
 export interface PatchProps {
+  /** Sets the element's `id`. */
   id?: Reactive<string>;
+  /** Sets the element's `value` property. */
   val?: Reactive<string>;
+  /** Toggles each class from the truthiness of its value. */
   class?: Record<string, Reactive<boolean>>;
+  /** Sets inline style properties by typed name. */
   style?: Partial<Record<WritableStyleKey, Reactive<string>>>;
+  /** Sets style properties via `setProperty` (custom properties, untyped names). */
   styleProp?: Record<string, Reactive<string>>;
+  /** Registers DOM event listeners. */
   on?: {
     [K in keyof HTMLElementEventMap]?: (ev: HTMLElementEventMap[K]) => void;
   };
+  /** Any other key is set as an attribute via `attr`. */
   [attr: string]: unknown;
 }
 
 const _noop = (): void => {};
 
+/**
+ * Declares one or more bindings to apply to the same element; must be
+ * interpolated in an attribute position. Each command receives a plain value
+ * (applied once) or a `Sig` (applied on mount and re-applied on change).
+ *
+ * The first argument may be a {@link PatchProps} object, desugared into the
+ * commands below in key order, optionally followed by command items.
+ *
+ * @param props - a props object.
+ * @param items - command items applied after the props.
+ * @returns a `Patch` for `html` to commit.
+ * @example
+ * ```ts
+ * html`<input ${patch({val: name, placeholder: 'name'})} />`;
+ * ```
+ * @group DOM bindings
+ */
 export function patch(props: PatchProps, ...items: ToAnyPatchItem[]): Patch;
+/**
+ * Declares one or more command bindings to apply to the same element.
+ *
+ * @param toPatchItems - the command items to apply.
+ * @returns a `Patch` for `html` to commit.
+ * @example
+ * ```ts
+ * html`<input ${patch(val(name), attr('name', placeholder))} />`;
+ * ```
+ * @group DOM bindings
+ */
 export function patch(...toPatchItems: ToAnyPatchItem[]): Patch;
 export function patch(
   first?: PatchProps | ToAnyPatchItem,
@@ -63,6 +106,14 @@ const idCmd = <T>(val: T, ctx: PatchContext) => {
   (ctx.node as Element).id = String(val);
 };
 
+/**
+ * Sets the element's `id`.
+ *
+ * @typeParam T - the value type.
+ * @param source - a plain value or a `Sig`.
+ * @returns a deferred patch item.
+ * @group DOM bindings
+ */
 export const id = <T>(source: T | Sig<T>): ToPatchItem<T> =>
   _toPatchItem(source, undefined, idCmd);
 
@@ -70,6 +121,14 @@ const valCmd = <T>(val: T, ctx: PatchContext) => {
   (ctx.node as unknown as {value: string}).value = String(val);
 };
 
+/**
+ * Sets the element's `value` property (form controls).
+ *
+ * @typeParam T - the value type.
+ * @param source - a plain value or a `Sig`.
+ * @returns a deferred patch item.
+ * @group DOM bindings
+ */
 export const val = <T>(source: T | Sig<T>): ToPatchItem<T> =>
   _toPatchItem(source, undefined, valCmd);
 
@@ -77,9 +136,23 @@ const attrCmd = <T>(val: T, ctx: PatchContext) => {
   (ctx.node as Element).setAttribute(_key(ctx), String(val));
 };
 
+/**
+ * Sets attribute `key`. Use this for boolean/ARIA/data attributes.
+ *
+ * @typeParam T - the value type.
+ * @param key - the attribute name.
+ * @param source - a plain value or a `Sig`.
+ * @returns a deferred patch item.
+ * @group DOM bindings
+ */
 export const attr = <T>(key: string, source: T | Sig<T>): ToPatchItem<T> =>
   _toPatchItem(source, [key], attrCmd);
 
+/**
+ * The union of `CSSStyleDeclaration` keys whose values are strings.
+ *
+ * @group DOM bindings
+ */
 export type WritableStyleKey = {
   [K in keyof CSSStyleDeclaration]: CSSStyleDeclaration[K] extends string
     ? K
@@ -90,6 +163,19 @@ const styleCmd = <T>(val: T, ctx: PatchContext) => {
   (ctx.node as HTMLElement).style[_key(ctx) as WritableStyleKey] = String(val);
 };
 
+/**
+ * Sets an inline style property by typed name.
+ *
+ * @typeParam T - the value type.
+ * @param key - the typed style property name.
+ * @param source - a plain value or a `Sig`.
+ * @returns a deferred patch item.
+ * @example
+ * ```ts
+ * html`<span ${patch(style('color', color))}>text</span>`;
+ * ```
+ * @group DOM bindings
+ */
 export const style = <T>(
   key: WritableStyleKey,
   source: T | Sig<T>,
@@ -99,6 +185,20 @@ const stylePropCmd = <T>(val: T, ctx: PatchContext) => {
   (ctx.node as HTMLElement).style.setProperty(_key(ctx), String(val));
 };
 
+/**
+ * Sets a style property via `CSSStyleDeclaration.setProperty`; use this for
+ * custom properties (`--my-var`) or untyped names.
+ *
+ * @typeParam T - the value type.
+ * @param key - the style property name.
+ * @param source - a plain value or a `Sig`.
+ * @returns a deferred patch item.
+ * @example
+ * ```ts
+ * html`<div ${patch(styleProp('--size', size))}></div>`;
+ * ```
+ * @group DOM bindings
+ */
 export const styleProp = <T>(key: string, source: T | Sig<T>): ToPatchItem<T> =>
   _toPatchItem(source, [key], stylePropCmd);
 
@@ -106,6 +206,15 @@ const toggleClassCmd = <T>(val: T, ctx: PatchContext) => {
   (ctx.node as Element).classList.toggle(_key(ctx), Boolean(val));
 };
 
+/**
+ * Toggles a single class from the truthiness of the value.
+ *
+ * @typeParam T - the value type.
+ * @param token - the class token.
+ * @param source - a plain value or a `Sig`.
+ * @returns a deferred patch item.
+ * @group DOM bindings
+ */
 export const toggleClass = <T>(
   token: string,
   source: T | Sig<T>,
@@ -117,11 +226,26 @@ const toggleClassesCmd = <T>(val: T, ctx: PatchContext) => {
   });
 };
 
+/**
+ * Toggles several classes from one value.
+ *
+ * @typeParam T - the value type.
+ * @param tokens - the class tokens.
+ * @param source - a plain value or a `Sig`.
+ * @returns a deferred patch item.
+ * @group DOM bindings
+ */
 export const toggleClasses = <T>(
   tokens: readonly string[],
   source: T | Sig<T>,
 ): ToPatchItem<T> => _toPatchItem(source, [...tokens], toggleClassesCmd);
 
+/**
+ * A custom patch callback run on mount and on change.
+ *
+ * @typeParam T - the value type.
+ * @group DOM bindings
+ */
 export type ActFn<T> = (elem: Element, val?: T) => void;
 
 const actCmd = <T>(val: T, ctx: PatchContext) => {
@@ -130,6 +254,20 @@ const actCmd = <T>(val: T, ctx: PatchContext) => {
   fn(ctx.node as Element, val);
 };
 
+/**
+ * Runs arbitrary code with the bound node and value, on mount and again on
+ * change. The escape hatch for anything the built-in commands do not cover.
+ *
+ * @typeParam T - the value type.
+ * @param source - a plain value or a `Sig`.
+ * @param fn - called with the node and current value.
+ * @returns a deferred patch item.
+ * @example
+ * ```ts
+ * html`<canvas ${patch(act(frame, (node, v) => draw(node, v)))}></canvas>`;
+ * ```
+ * @group DOM bindings
+ */
 export const act = <T>(source: T | Sig<T>, fn: ActFn<T>): ToPatchItem<T> =>
   _toPatchItem(source, [fn], actCmd);
 
@@ -152,6 +290,17 @@ const onCmd = (listener: unknown, ctx: PatchContext) => {
   );
 };
 
+/**
+ * Adds a DOM event listener. The listener is registered once at mount and is
+ * not a reactive source; combine it with `sig` writes to drive updates.
+ *
+ * @typeParam K - the event type.
+ * @param type - the event name.
+ * @param listener - the event listener.
+ * @param options - standard `addEventListener` options.
+ * @returns a deferred patch item.
+ * @group DOM bindings
+ */
 export const on = <K extends keyof HTMLElementEventMap>(
   type: K,
   listener: _Listener<K>,
