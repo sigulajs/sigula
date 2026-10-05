@@ -59,8 +59,8 @@ const Todos = (): View => {
         ${patch(
           on('click', () => item.done.trans((v) => !v)),
           style(
-            'textDecoration',
             compute(item.done, (v): string => (v ? 'line-through' : 'none')),
+            'textDecoration',
           ),
         )}
       >${text(item.text)}</span>
