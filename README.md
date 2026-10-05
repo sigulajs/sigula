@@ -387,7 +387,7 @@ const html: (strs: TemplateStringsArray, ...items: HtmlItem[]) => View;
 
 Tagged template that parses native HTML and returns a `View`. Three kinds of interpolation are supported:
 
-- a `View` (from `text`, `raw`, `view`, `repeat`, `list`, or another `html`) fills a content position
+- a `View` (from `text`, `raw`, `view`, `repeat`, `list`, `frag`, or another `html`) fills a content position
 - a `Patch` (from `patch(...)`) fills an attribute position
 - a plain value or a `Sig` fills a content position as text: a `Sig` binds reactively, and any other value becomes `String(value)`, so `null`, `undefined`, and `false` render as `"null"`, `"undefined"`, and `"false"`
 
@@ -440,7 +440,7 @@ interface View<T = unknown, C extends CmdContext = any> {
 type AnyView = View<any, any>;
 ```
 
-`View` is the unit returned by `html`, `text`, `raw`, `view`, `repeat`, and `list`. Its `node` is a DOM node or `DocumentFragment`. `boundary` returns the nodes the view currently occupies; `render` calls it at disposal time so a view that swaps its own contents (`view`, `repeat`) is torn down from its current nodes. `cleanBinds` detaches the view's bindings and, recursively, those of its `children`.
+`View` is the unit returned by `html`, `text`, `raw`, `view`, `repeat`, `list`, and `frag`. Its `node` is a DOM node or `DocumentFragment`. `boundary` returns the nodes the view currently occupies; `render` calls it at disposal time so a view that swaps its own contents (`view`, `repeat`) is torn down from its current nodes. `cleanBinds` detaches the view's bindings and, recursively, those of its `children`.
 
 #### `replaceWithView`
 
@@ -693,6 +693,18 @@ html`<ul>${list(items, (item, i) => html`<li>${i}: ${text(item)}</li>`)}</ul>`;
 ```
 
 An empty array renders `<!--empty-list-->`.
+
+#### `frag`
+
+```ts
+const frag: (...views: AnyView[]) => View;
+```
+
+Composes several views into one content-position view. The views' nodes are inserted as flat siblings, in order, with no wrapper element; nested fragments flatten. Reactivity comes from the child views. `frag()` with no arguments renders nothing.
+
+```ts
+html`<div>${frag(text('a'), html`<b>${text('b')}</b>`)}</div>`;
+```
 
 ### Rendering
 
