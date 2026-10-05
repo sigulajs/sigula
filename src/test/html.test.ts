@@ -91,7 +91,7 @@ describe('html', () => {
       i === 0 ? '<ul><li ' : i === slots ? '></li></ul>' : '></li><li ',
     ) as unknown as TemplateStringsArray;
 
-      render(html(strs, ...sigs.map((s) => patch(attr('data-v', s)))), host);
+    render(html(strs, ...sigs.map((s) => patch(attr('data-v', s)))), host);
 
     const li = host.querySelectorAll('li');
     expect(li.length).toBe(slots);
