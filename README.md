@@ -461,7 +461,7 @@ The first argument may instead be a `PatchProps` object, which is desugared into
 | `on` | `on` per entry |
 | any other | `attr` |
 
-Values may be plain or `Sig`. A key whose value is `undefined` is skipped. Arbitrary attributes are always set with `setAttribute(key, String(value))`; `patch({disabled: false})` sets `disabled="false"`.
+Values for `id`, `val`, `class`, `style`, `styleProp` and arbitrary attributes may be plain or `Sig` (reactive). `on` takes a listener function and is not reactive, and the props form has no `options` argument — use the `on` command when you need `capture`/`passive` options. A key or entry whose value is `undefined` is skipped. Arbitrary attributes are always set with `setAttribute(key, String(value))`; `patch({disabled: false})` sets `disabled="false"`.
 
 ```ts
 html`<input ${patch({val: name, placeholder: 'name'})} />`;
@@ -601,6 +601,8 @@ interface Patch {
 }
 ```
 
+`ToPatchItem` defers reading the target element until mount. `patch` collects these factories into a single `Patch`; `cleanBinds` detaches the bindings created when the patch was committed to an element.
+
 #### `PatchProps`
 
 ```ts
@@ -617,7 +619,7 @@ interface PatchProps {
 }
 ```
 
-`ToPatchItem` defers reading the target element until mount. `patch` collects these factories into a single `Patch`; `cleanBinds` detaches the bindings created when the patch was committed to an element.
+`Reactive` is an internal helper used by `PatchProps`, not an exported type.
 
 ### Control flow
 
