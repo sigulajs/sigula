@@ -12,6 +12,7 @@ import {
   toBoundary,
   type View,
 } from './core';
+import {text} from './text';
 
 const MARK = `@sig_${Math.random().toFixed(9).slice(2)}`;
 
@@ -68,7 +69,20 @@ const _shape = (items: readonly (Patch | AnyView)[]): number | string => {
 
 const _hasMark = (el: Element) => el.hasAttribute(MARK);
 const _rmMark = (el: Element) => el.removeAttribute(MARK);
-const _isView = (item: Comment) => item.data.trim() === MARK;
+const _isViewMark = (item: Comment) => item.data.trim() === MARK;
+
+const isPatch = (item: unknown): item is Patch =>
+  typeof item === 'object' &&
+  item !== null &&
+  (item as {type?: string}).type === 'patch';
+
+const isView = (item: unknown): item is AnyView =>
+  typeof item === 'object' &&
+  item !== null &&
+  (item as {type?: string}).type === 'view';
+
+const _toItem = (item: unknown): Patch | AnyView =>
+  isPatch(item) || isView(item) ? item : text(item);
 
 const commitView = <T, C extends CmdContext>(view: View<T, C>, node: Node) => {
   (node as Comment).replaceWith(view.node);
@@ -122,13 +136,18 @@ const _scan = (
   w.currentNode = document;
 };
 
+type TextValue = string | number | boolean | bigint | null | undefined;
+type HtmlItem = Patch | AnyView | TextValue | Sig<any>;
+
 export const html = (
   strs: TemplateStringsArray,
-  ...items: (Patch | AnyView)[]
+  ...rawItems: HtmlItem[]
 ): View => {
   if (strs.length <= 1 && !strs?.[0]) err('E10');
   const slots = strs.length - 1;
-  if (items.length !== slots) err(`E11:${slots}:${items.length}`);
+  if (rawItems.length !== slots) err(`E11:${slots}:${rawItems.length}`);
+
+  const items = rawItems.map(_toItem);
 
   let frag: DocumentFragment;
   const wraps: Wrap<unknown, CmdContext>[] = [];
@@ -159,7 +178,8 @@ export const html = (
         (node) =>
           node.nodeType === Node.ELEMENT_NODE
             ? _hasMark(node as Element)
-            : node.nodeType === Node.COMMENT_NODE && _isView(node as Comment),
+            : node.nodeType === Node.COMMENT_NODE &&
+              _isViewMark(node as Comment),
         tpl.indexes,
       );
     }

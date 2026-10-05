@@ -114,4 +114,51 @@ describe('html', () => {
       expect(li[slots - 1]?.getAttribute('data-v')).toBe(`v${slots - 1}`);
     }
   });
+
+  it('renders primitive content interpolations as text', () => {
+    render(html`<p>${'hi'} ${42}</p>`, document.body);
+    expect(document.body.innerHTML).toBe('<p>hi 42</p>');
+  });
+
+  it('stringifies nullish and boolean interpolations', () => {
+    render(html`<p>${null}|${undefined}|${false}</p>`, document.body);
+    expect(document.body.innerHTML).toBe('<p>null|undefined|false</p>');
+  });
+
+  it('binds a Sig interpolation reactively and detaches on dispose', async () => {
+    const name = sig('Alice');
+    const dispose = render(html`<p>Hello, ${name}!</p>`, document.body);
+    expect(document.body.innerHTML).toBe('<p>Hello, Alice!</p>');
+
+    name.update('Bob');
+    await Promise.resolve();
+    expect(document.body.innerHTML).toBe('<p>Hello, Bob!</p>');
+
+    dispose();
+    expect(name.getBinds().length).toBe(0);
+  });
+
+  it('mixes explicit views and primitive interpolations', () => {
+    const n = sig(1);
+    render(html`<p>${text(n)} and ${'x'}</p>`, document.body);
+    expect(document.body.innerHTML).toBe('<p>1 and x</p>');
+  });
+
+  it('shares one cache shape between a view and a primitive at the same slot', () => {
+    const slot = (primitive: boolean) =>
+      html`<p>${primitive ? 'plain' : text('wrapped')}</p>`;
+
+    render(slot(true), document.body);
+    expect(document.body.innerHTML).toBe('<p>plain</p>');
+
+    document.body.innerHTML = '';
+    render(slot(false), document.body);
+    expect(document.body.innerHTML).toBe('<p>wrapped</p>');
+  });
+
+  it('rejects a primitive in an attribute position', () => {
+    expect(() => render(html`<div class=${'x'}></div>`, document.body)).toThrow(
+      'E12',
+    );
+  });
 });
