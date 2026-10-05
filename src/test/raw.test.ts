@@ -1,5 +1,5 @@
 import {beforeEach, describe, expect, it} from 'vitest';
-import {html, raw, render, sig} from '..';
+import {html, raw, render, sig, text, view} from '..';
 
 describe('raw', () => {
   beforeEach(() => {
@@ -40,14 +40,20 @@ describe('raw', () => {
     expect(document.body.innerHTML).toBe('');
   });
 
-  it('keeps preceding siblings when at the end of an html template', async () => {
+  it('keeps the end edge correct when a nested html is replaced', async () => {
     const s = sig('<i>a</i>');
-    render(html`<span>KEPT</span>${raw(s)}`, document.body);
-    expect(document.body.innerHTML).toBe('<span>KEPT</span><i>a</i>');
+    const swap = sig(false);
+    const inner = html`<span>KEPT</span>${raw(s)}`;
+    render(
+      html`<p>before</p>${view(swap, (v) => (v ? text('REPLACED') : inner))}<p>AFTER</p>`,
+      document.body,
+    );
 
     s.update('');
     await Promise.resolve();
-    expect(document.body.innerHTML).toBe('<span>KEPT</span>');
+    swap.update(true);
+    await Promise.resolve();
+    expect(document.body.innerHTML).toBe('<p>before</p>REPLACED<p>AFTER</p>');
   });
 
   it('replaces content reactively across node counts', async () => {

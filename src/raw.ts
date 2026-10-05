@@ -13,11 +13,11 @@ interface RawContext extends CmdContext {
   boundary: Boundary;
 }
 
-// Parse trusted HTML through a detached <template>. Scripts inserted this way
-// are inert, but inline handlers and other vectors still apply on connect, so
-// callers must sanitize untrusted input. An empty string parses to no nodes;
-// fall back to an empty text node so the view always has a valid boundary
-// anchor.
+// Parse trusted HTML through a detached <template>. Assigning innerHTML does
+// not run scripts, but the parsed nodes are later connected to the document, so
+// inline handlers and other vectors still apply and callers must sanitize
+// untrusted input. An empty string parses to no nodes; fall back to an empty
+// text node so the view always has a valid boundary anchor.
 const _parse = (source: string): Node => {
   const template = document.createElement('template');
   template.innerHTML = source;
