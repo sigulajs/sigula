@@ -1,7 +1,11 @@
-import {toBoundary} from './boundary';
-import type {PatchContext} from './patch';
-import {createBind, removeBind, Sig} from './sig.bind';
-import type {View} from './view';
+import {
+  createBind,
+  type PatchContext,
+  removeBind,
+  Sig,
+  toBoundary,
+  type View,
+} from './core';
 
 const textCmd = <T>(val: T, ctx: PatchContext) => {
   ctx.node.textContent = String(val);

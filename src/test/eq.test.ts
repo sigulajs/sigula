@@ -1,6 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {eq} from '#/eq.js';
-import {html, render, sig, text} from '..';
+import {eq, html, render, sig, text} from '..';
 
 describe('isEqual', () => {
   describe('pinned current behaviour', () => {

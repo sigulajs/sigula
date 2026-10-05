@@ -180,3 +180,5 @@ export const createBind = <T, C extends CmdContext>(
   sig.addBind(bind);
   return bind;
 };
+
+export type Reactive<T> = T | Sig<T> | undefined;

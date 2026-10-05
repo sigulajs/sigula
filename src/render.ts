@@ -1,5 +1,4 @@
-import {removeBoundary} from './boundary';
-import type {AnyView} from './view';
+import {type AnyView, removeBoundary} from './core';
 
 export const render = (
   viewArg: AnyView | (() => AnyView),

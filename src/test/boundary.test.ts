@@ -1,5 +1,5 @@
 import {beforeEach, describe, expect, it} from 'vitest';
-import {replaceWithNode, toBoundary} from '../boundary';
+import {replaceWithNode, toBoundary} from '..';
 
 const text = (s: string) => document.createTextNode(s);
 const el = (tag: string) => document.createElement(tag);

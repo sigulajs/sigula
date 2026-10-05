@@ -1,10 +1,17 @@
-import {toBoundary} from './boundary';
-import type {CmdContext} from './cmd';
-import {err} from './err';
-import type {Patch, PatchContext} from './patch';
-import {type Bind, createBind, removeBind, Sig} from './sig.bind';
-import {at} from './utils';
-import type {AnyView, View} from './view';
+import {
+  type AnyView,
+  at,
+  type Bind,
+  type CmdContext,
+  createBind,
+  err,
+  type Patch,
+  type PatchContext,
+  removeBind,
+  Sig,
+  toBoundary,
+  type View,
+} from './core';
 
 const MARK = `@sig_${Math.random().toFixed(9).slice(2)}`;
 

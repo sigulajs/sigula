@@ -1,24 +1,13 @@
-import type {Cmd, CmdContext} from './cmd';
-import {err} from './err';
-import type {Sig} from './sig.bind';
-
-export interface PatchContext extends CmdContext {
-  node: Node;
-  extra?: unknown[];
-}
-
-export interface PatchItem<T> {
-  source: T | Sig<T>;
-  context: PatchContext;
-  cmd: Cmd<T, PatchContext>;
-}
-export type ToPatchItem<T> = (el: Element) => PatchItem<T>;
-
-// biome-ignore lint/suspicious/noExplicitAny: any patch item
-export type AnyPatchItem = PatchItem<any>;
-export type ToAnyPatchItem = (el: Element) => AnyPatchItem;
-
-type Reactive<T> = T | Sig<T> | undefined;
+import {
+  type Cmd,
+  err,
+  type Patch,
+  type PatchContext,
+  type Reactive,
+  type Sig,
+  type ToAnyPatchItem,
+  type ToPatchItem,
+} from './core';
 
 export interface PatchProps {
   id?: Reactive<string>;
@@ -33,11 +22,6 @@ export interface PatchProps {
 }
 
 const _noop = (): void => {};
-export interface Patch {
-  type: 'patch';
-  toPatchItems: ToAnyPatchItem[];
-  cleanBinds: () => void;
-}
 
 export function patch(props: PatchProps, ...items: ToAnyPatchItem[]): Patch;
 export function patch(...toPatchItems: ToAnyPatchItem[]): Patch;

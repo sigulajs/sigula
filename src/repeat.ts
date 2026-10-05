@@ -1,16 +1,20 @@
 import {
+  type AnyView,
+  at,
   type Boundary,
+  type CmdContext,
+  createBind,
+  eq,
+  err,
+  removeBind,
   removeBoundary,
   replaceWithNode,
+  replaceWithView,
+  type Sig,
   toBoundary,
+  type View,
   walkBoundary,
-} from './boundary';
-import type {CmdContext} from './cmd';
-import {eq} from './eq';
-import {err} from './err';
-import {createBind, removeBind, type Sig} from './sig.bind';
-import {at} from './utils';
-import {type AnyView, replaceWithView, type View} from './view';
+} from './core';
 
 export type RepeatProp<T> = {
   key: (item: T) => string;
