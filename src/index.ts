@@ -1,5 +1,6 @@
 export * from './core';
 export * from './html';
+export * from './list';
 export * from './patch';
 export * from './render';
 export * from './repeat';

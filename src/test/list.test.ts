@@ -1,0 +1,80 @@
+import {beforeEach, describe, expect, it, vi} from 'vitest';
+import {html, list, render, sig, text, view} from '..';
+
+describe('list', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('renders items in order and passes the index', () => {
+    render(
+      list(['a', 'b', 'c'], (item, index) => text(`${item}${index}`)),
+      document.body,
+    );
+    expect(document.body.innerHTML).toBe('a0b1c2');
+  });
+
+  it('updates reactive content inside an item', async () => {
+    const count = sig(0);
+    render(
+      list(['a', 'b'], (item) => html`<span>${item}${text(count)}</span>`),
+      document.body,
+    );
+    expect(document.body.innerHTML).toBe('<span>a0</span><span>b0</span>');
+
+    count.update(1);
+    await Promise.resolve();
+    expect(document.body.innerHTML).toBe('<span>a1</span><span>b1</span>');
+  });
+
+  it('renders an empty-list comment without calling viewFn', () => {
+    const fn = vi.fn(() => text('x'));
+    render(list([], fn), document.body);
+    expect(document.body.innerHTML).toBe('<!--empty-list-->');
+    expect(fn).not.toHaveBeenCalled();
+  });
+
+  it('cleans nested binds on dispose', () => {
+    const s = sig('x');
+    const dispose = render(
+      list([1, 2], () => text(s)),
+      document.body,
+    );
+    expect(s.getBinds().length).toBe(2);
+
+    dispose();
+    expect(s.getBinds().length).toBe(0);
+  });
+
+  it('keeps following siblings when used in html', () => {
+    render(
+      html`<main>${list([1, 2], (n) => text(String(n)))}<footer>KEPT</footer></main>`,
+      document.body,
+    );
+    expect(document.body.innerHTML).toBe(
+      '<main>12<footer>KEPT</footer></main>',
+    );
+  });
+
+  it('accepts a readonly array', () => {
+    const items: readonly number[] = [1, 2];
+    render(
+      list(items, (n) => text(String(n))),
+      document.body,
+    );
+    expect(document.body.innerHTML).toBe('12');
+  });
+
+  it('supports a reactive view inside an item', async () => {
+    const mode = sig('a');
+    render(
+      list([1, 2], (n) => view(mode, (v) => text(`${n}:${v}`))),
+      document.body,
+    );
+    expect(document.body.innerHTML).toBe('1:a2:a');
+
+    mode.update('b');
+    await Promise.resolve();
+    expect(document.body.innerHTML).toBe('1:b2:b');
+  });
+});
