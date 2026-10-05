@@ -6,13 +6,68 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const dts = readFileSync(join(root, 'dist', 'sigula.d.ts'), 'utf8');
 const out = join(root, 'Reference.md');
 
-const GROUP_ORDER = [
-  'Reactivity',
-  'Templates',
-  'DOM bindings',
-  'Control flow',
-  'Rendering',
-  'Low-level API',
+// Display order: the README "API Cheat Sheet" symbols first, then the remaining
+// supporting symbols.
+const ORDER = [
+  'sig',
+  'compute',
+  'html',
+  'text',
+  'raw',
+  'patch',
+  'id',
+  'val',
+  'attr',
+  'style',
+  'styleProp',
+  'toggleClass',
+  'toggleClasses',
+  'on',
+  'act',
+  'view',
+  'repeat',
+  'list',
+  'frag',
+  'render',
+  'createBind',
+  'removeBind',
+  'eq',
+  'toBoundary',
+  'walkBoundary',
+  'Sig',
+  'DerivedSig',
+  'View',
+  'Patch',
+  'Reactive',
+  'Eq',
+  'Equatable',
+  'Bind',
+  'AnyBind',
+  'UnknownRecord',
+  'SigRecord',
+  'ValRecord',
+  'ViewContext',
+  'ChildView',
+  'AnyView',
+  'replaceWithView',
+  'PatchProps',
+  'PatchContext',
+  'PatchItem',
+  'ToPatchItem',
+  'AnyPatchItem',
+  'ToAnyPatchItem',
+  'WritableStyleKey',
+  'ActFn',
+  'RepeatProp',
+  'RepeatContext',
+  'Boundary',
+  'removeBoundary',
+  'replaceWithNode',
+  'CmdContext',
+  'Cmd',
+  'AnyCmd',
+  'at',
+  'err',
 ];
 
 interface Tag {
@@ -267,15 +322,24 @@ for (const s of collected) {
   }
 }
 
-const grouped = new Map<string, ApiSymbol[]>();
-for (const s of byName.values()) {
-  const g = GROUP_ORDER.includes(s.group) ? s.group : 'Other';
-  if (g === 'Other') {
-    console.warn(`gen-reference: unknown @group "${s.group}" for ${s.name}`);
+const orderIndex = new Map(ORDER.map((name, index) => [name, index]));
+const sourceIndex = new Map(
+  [...byName.keys()].map((name, index) => [name, index]),
+);
+const sorted = [...byName.values()].sort((a, b) => {
+  const ai = orderIndex.get(a.name);
+  const bi = orderIndex.get(b.name);
+  if (ai !== undefined && bi !== undefined) return ai - bi;
+  if (ai !== undefined) return -1;
+  if (bi !== undefined) return 1;
+  return (
+    (sourceIndex.get(a.name) as number) - (sourceIndex.get(b.name) as number)
+  );
+});
+for (const s of sorted) {
+  if (!orderIndex.has(s.name)) {
+    console.warn(`gen-reference: "${s.name}" is not in ORDER; appended`);
   }
-  const bucket = grouped.get(g);
-  if (bucket) bucket.push(s);
-  else grouped.set(g, [s]);
 }
 
 const renderTag = (text: string): string => {
@@ -287,33 +351,28 @@ let md = '# Reference\n\n';
 md +=
   '> Generated from the TSDoc comments in `src/`. Do not edit by hand — run `pnpm docs:api`.\n\n';
 
-for (const g of [...GROUP_ORDER, 'Other']) {
-  const list = grouped.get(g);
-  if (!list || list.length === 0) continue;
-  md += `## ${g}\n\n`;
-  for (const s of list) {
-    md += `### \`${s.name}\`\n\n`;
-    md += '```ts\n' + s.signatures.join('\n') + '\n```\n\n';
-    if (s.summary) md += `${s.summary}\n\n`;
-    if (s.typeParams.length) {
-      md += '**Type parameters**\n\n';
-      md += s.typeParams.map(renderTag).join('\n') + '\n\n';
+for (const s of sorted) {
+  md += `### \`${s.name}\`\n\n`;
+  md += '```ts\n' + s.signatures.join('\n') + '\n```\n\n';
+  if (s.summary) md += `${s.summary}\n\n`;
+  if (s.typeParams.length) {
+    md += '**Type parameters**\n\n';
+    md += s.typeParams.map(renderTag).join('\n') + '\n\n';
+  }
+  if (s.params.length) {
+    md += '**Parameters**\n\n';
+    md += s.params.map(renderTag).join('\n') + '\n\n';
+  }
+  if (s.returns) md += `**Returns** ${s.returns}\n\n`;
+  if (s.examples.length) {
+    md += '**Example**\n\n';
+    for (const ex of s.examples) {
+      md += (ex.startsWith('```') ? ex : `\`\`\`ts\n${ex}\n\`\`\``) + '\n\n';
     }
-    if (s.params.length) {
-      md += '**Parameters**\n\n';
-      md += s.params.map(renderTag).join('\n') + '\n\n';
-    }
-    if (s.returns) md += `**Returns** ${s.returns}\n\n`;
-    if (s.examples.length) {
-      md += '**Example**\n\n';
-      for (const ex of s.examples) {
-        md += (ex.startsWith('```') ? ex : `\`\`\`ts\n${ex}\n\`\`\``) + '\n\n';
-      }
-    }
-    if (s.members.length) {
-      md += '**Members**\n\n';
-      md += s.members.map((m) => `- \`${m.name}\` — ${m.doc}`).join('\n') + '\n\n';
-    }
+  }
+  if (s.members.length) {
+    md += '**Members**\n\n';
+    md += s.members.map((m) => `- \`${m.name}\` — ${m.doc}`).join('\n') + '\n\n';
   }
 }
 

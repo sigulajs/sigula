@@ -402,6 +402,8 @@ sig.update(1); sig.update(2); sig.update(3);  // each dependent binding runs ONC
 
 ## 📖 API Cheat Sheet
 
+Full signatures and documentation: [Reference.md](./Reference.md).
+
 | Export | Kind | Returns |
 | --- | --- | --- |
 | `sig(v, opts?)` | state | `Sig<T>` |
