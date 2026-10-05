@@ -814,7 +814,7 @@ Look yours up here:
 - **Batched.** When a signal changes, its bindings are queued, not run synchronously.
 - **Coalesced per binding.** A binding that is written to multiple times before the microtask flush runs once, reading the signal's final value. `sig.update(1); sig.update(2); sig.update(3)` runs each dependent binding a single time against `3`.
 - **`update` vs `forceUpdate`.** `update` skips work when the new value is deeply equal to the current one; `forceUpdate` always notifies. Use `forceUpdate` when a value is structurally equal but you still need a re-render (for example, mutating an object in place).
-- **`notify` for in-place mutation.** `sig.notify()` re-runs dependents against the current value without setting a new one. Use it after mutating a held object or array in place; `update`/`forceUpdate` set a value.
+- **`notify` for in-place mutation.** `sig.notify()` re-runs dependents against the current value without setting a new one. Use it after mutating a held object or array in place; `update`/`forceUpdate` set a value. On a `DerivedSig`, `notify` schedules its consumers but does not itself recompute the derived value.
 - **Error isolation.** A throwing binding does not stop the rest of the queue; the error is logged as `console.error('[Queue] task failed:', error, bind)`.
 - **Deep equality by default.** `update`, `compute`, and `repeat` compare with `isEqual`, so replacing `{a: 1}` with another `{a: 1}` is a no-op.
 

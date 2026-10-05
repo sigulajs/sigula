@@ -356,4 +356,21 @@ describe('Sig.notify', () => {
     expect(s.get()).toBe(2);
     expect(seen).toEqual([2]);
   });
+
+  it('re-runs a direct bind after in-place mutation', async () => {
+    const items = sig<number[]>([]);
+    const lens: number[] = [];
+    createBind(items, {}, (v: number[]) => {
+      lens.push(v.length);
+    });
+
+    items.notify();
+    await flush();
+    expect(lens).toEqual([0]);
+
+    items.get().push(1);
+    items.notify();
+    await flush();
+    expect(lens).toEqual([0, 1]);
+  });
 });
