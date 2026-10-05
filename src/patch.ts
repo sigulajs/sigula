@@ -210,7 +210,9 @@ const _propsToItems = (props: PatchProps): ToAnyPatchItem[] => {
         for (const [type, listener] of Object.entries(
           value as Record<string, _Listener<keyof HTMLElementEventMap>>,
         )) {
-          items.push(on(type as keyof HTMLElementEventMap, listener));
+          if (listener !== undefined) {
+            items.push(on(type as keyof HTMLElementEventMap, listener));
+          }
         }
         break;
       default:

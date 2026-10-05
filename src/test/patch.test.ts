@@ -300,4 +300,13 @@ describe('patch', () => {
     render(html`<div ${patch(props)}></div>`, document.body);
     expect(document.querySelector('div')?.hasAttribute('data-x')).toBe(false);
   });
+
+  it('props: zero-argument patch is a no-op', () => {
+    expect(patch().toPatchItems).toEqual([]);
+  });
+
+  it('props: props are applied before items', () => {
+    render(html`<div ${patch({id: 'a'}, id('b'))}></div>`, document.body);
+    expect(document.querySelector('div')?.id).toBe('b');
+  });
 });
