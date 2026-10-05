@@ -4,7 +4,7 @@
 
 **Goal:** Add a static `list(items, viewFn)` helper that renders a fixed array as sibling views in order.
 
-**Architecture:** `list` builds a `DocumentFragment` by mapping `items` through `viewFn(item, index)` and appending each returned `.node`, mirroring `repeat`'s `_init` without keys or binds. It precomputes `toBoundary(frag)` before insertion (inserting a fragment empties it) and tears down by cleaning every child view. A new `src/list.ts` keeps it single-purpose; `repeat` is untouched.
+**Architecture:** `list` builds a `DocumentFragment` by mapping `items` through `viewFn(item, index)` and appending each returned `.node`, mirroring `repeat`'s `_init` without keys or binds. It derives its boundary lazily from the first/last child views (so an edge `view()` root-node swap is tracked) and tears down by cleaning every child view; empty input returns a `<!--empty-list-->` comment node. A new `src/list.ts` keeps it single-purpose; `repeat` is untouched.
 
 **Tech Stack:** TypeScript (strict, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`), vitest + happy-dom, tsdown.
 
@@ -232,7 +232,7 @@ export * from './view';
 - [ ] **Step 5: Run the tests and typecheck**
 
 Run: `pnpm vitest run src/test/list.test.ts && pnpm typecheck`
-Expected: PASS. All 10 `list` cases pass and there are no type errors.
+Expected: PASS. All 12 `list` cases pass and there are no type errors.
 
 - [ ] **Step 6: Commit**
 

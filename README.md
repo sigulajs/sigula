@@ -387,7 +387,7 @@ const html: (strs: TemplateStringsArray, ...items: HtmlItem[]) => View;
 
 Tagged template that parses native HTML and returns a `View`. Three kinds of interpolation are supported:
 
-- a `View` (from `text`, `view`, `repeat`, or another `html`) fills a content position
+- a `View` (from `text`, `view`, `repeat`, `list`, or another `html`) fills a content position
 - a `Patch` (from `patch(...)`) fills an attribute position
 - a plain value or a `Sig` fills a content position as text: a `Sig` binds reactively, and any other value becomes `String(value)`, so `null`, `undefined`, and `false` render as `"null"`, `"undefined"`, and `"false"`
 
@@ -428,7 +428,7 @@ interface View<T = unknown, C extends CmdContext = any> {
 type AnyView = View<any, any>;
 ```
 
-`View` is the unit returned by `html`, `text`, `view`, and `repeat`. Its `node` is a DOM node or `DocumentFragment`. `boundary` returns the nodes the view currently occupies; `render` calls it at disposal time so a view that swaps its own contents (`view`, `repeat`) is torn down from its current nodes. `cleanBinds` detaches the view's bindings and, recursively, those of its `children`.
+`View` is the unit returned by `html`, `text`, `view`, `repeat`, and `list`. Its `node` is a DOM node or `DocumentFragment`. `boundary` returns the nodes the view currently occupies; `render` calls it at disposal time so a view that swaps its own contents (`view`, `repeat`) is torn down from its current nodes. `cleanBinds` detaches the view's bindings and, recursively, those of its `children`.
 
 #### `replaceWithView`
 
@@ -639,7 +639,7 @@ const view: <T>(
 Conditionally renders one view or another. Whenever `sig` changes, `viewFn` is called with the new value, the previous view is torn down, and a new one is mounted in its place.
 
 ```ts
-html`<div>${view(isEmpty, (v) => (v ? text('empty') : list))}</div>`;
+html`<div>${view(isEmpty, (v) => (v ? text('empty') : listView))}</div>`;
 ```
 
 #### `repeat`
