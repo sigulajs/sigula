@@ -16,6 +16,21 @@ const viewCmd = <T>(val: T, ctx: ViewContext<T>) => {
   ctx.inner = newInner;
 };
 
+/**
+ * Conditionally renders one view or another. Whenever `sig` changes, `viewFn`
+ * runs with the new value, the previous view is torn down, and a new one is
+ * mounted in its place.
+ *
+ * @typeParam T - the value type.
+ * @param sig - the signal to switch on.
+ * @param viewFn - builds the view for a value.
+ * @returns a `View` that swaps its contents.
+ * @example
+ * ```ts
+ * html`<div>${view(isEmpty, (v) => (v ? text('empty') : listView))}</div>`;
+ * ```
+ * @group Control flow
+ */
 export const view = <T>(
   sig: Sig<T>,
   viewFn: (val: T) => AnyView,

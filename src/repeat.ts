@@ -16,9 +16,18 @@ import {
   walkBoundary,
 } from './core';
 
+/**
+ * Options for {@link repeat}.
+ *
+ * @typeParam T - the item type.
+ * @group Control flow
+ */
 export type RepeatProp<T> = {
+  /** Returns the unique, stable key for an item. */
   key: (item: T) => string;
+  /** Builds the view for an item. */
   view: (item: T) => AnyView;
+  /** Item comparator; defaults to `eq`. */
   eq?: (a: T, b: T) => boolean;
 };
 
@@ -36,9 +45,18 @@ interface Track<T> {
   cleaned?: boolean;
 }
 
+/**
+ * Context for the `repeat` command.
+ *
+ * @typeParam T - the item type.
+ * @group Control flow
+ */
 export interface RepeatContext<T> extends CmdContext {
+  /** The repeat options. */
   prop: RepeatProp<T>;
+  /** The current node boundary. */
   boundary: Boundary;
+  /** The tracked items and their views. */
   tracks: Track<T>[];
 }
 
@@ -327,6 +345,26 @@ const _init = <T>(
   return frag;
 };
 
+/**
+ * Keyed list rendering. On each change `repeat` matches items by `key`, then
+ * reuses, moves, creates, or removes as few DOM nodes as possible. The item
+ * comparator defaults to `eq`; when an item is deeply equal to the track it
+ * already occupies, the track is reused without rebuilding its view. An empty
+ * array renders `<!--empty-list-->`.
+ *
+ * @typeParam T - the item type.
+ * @param sig - the signal holding the items.
+ * @param prop - the key/view/eq options.
+ * @returns a `View` rendering the list.
+ * @example
+ * ```ts
+ * html`<ul>${repeat(todos, {
+ *   key: (item) => item.id.toString(),
+ *   view: (item) => html`<li>${text(item.label)}</li>`,
+ * })}</ul>`;
+ * ```
+ * @group Control flow
+ */
 export const repeat = <T>(
   sig: Sig<T[]>,
   prop: RepeatProp<T>,
