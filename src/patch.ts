@@ -77,7 +77,7 @@ const attrCmd = <T>(val: T, ctx: PatchContext) => {
   (ctx.node as Element).setAttribute(_key(ctx), String(val));
 };
 
-export const attr = <T>(source: T | Sig<T>, key: string): ToPatchItem<T> =>
+export const attr = <T>(key: string, source: T | Sig<T>): ToPatchItem<T> =>
   _toPatchItem(source, [key], attrCmd);
 
 export type WritableStyleKey = {
@@ -91,15 +91,15 @@ const styleCmd = <T>(val: T, ctx: PatchContext) => {
 };
 
 export const style = <T>(
-  source: T | Sig<T>,
   key: WritableStyleKey,
+  source: T | Sig<T>,
 ): ToPatchItem<T> => _toPatchItem(source, [key], styleCmd);
 
 const stylePropCmd = <T>(val: T, ctx: PatchContext) => {
   (ctx.node as HTMLElement).style.setProperty(_key(ctx), String(val));
 };
 
-export const styleProp = <T>(source: T | Sig<T>, key: string): ToPatchItem<T> =>
+export const styleProp = <T>(key: string, source: T | Sig<T>): ToPatchItem<T> =>
   _toPatchItem(source, [key], stylePropCmd);
 
 const toggleClassCmd = <T>(val: T, ctx: PatchContext) => {
@@ -107,8 +107,8 @@ const toggleClassCmd = <T>(val: T, ctx: PatchContext) => {
 };
 
 export const toggleClass = <T>(
-  source: T | Sig<T>,
   token: string,
+  source: T | Sig<T>,
 ): ToPatchItem<T> => _toPatchItem(source, [token], toggleClassCmd);
 
 const toggleClassesCmd = <T>(val: T, ctx: PatchContext) => {
@@ -118,9 +118,9 @@ const toggleClassesCmd = <T>(val: T, ctx: PatchContext) => {
 };
 
 export const toggleClasses = <T>(
+  tokens: readonly string[],
   source: T | Sig<T>,
-  ...tokens: string[]
-): ToPatchItem<T> => _toPatchItem(source, tokens, toggleClassesCmd);
+): ToPatchItem<T> => _toPatchItem(source, [...tokens], toggleClassesCmd);
 
 export type ActFn<T> = (elem: Element, val?: T) => void;
 
@@ -173,21 +173,21 @@ const _propsToItems = (props: PatchProps): ToAnyPatchItem[] => {
         for (const [token, v] of Object.entries(
           value as Record<string, Reactive<boolean>>,
         )) {
-          if (v !== undefined) items.push(toggleClass(v, token));
+          if (v !== undefined) items.push(toggleClass(token, v));
         }
         break;
       case 'style':
         for (const [name, v] of Object.entries(
           value as Partial<Record<WritableStyleKey, Reactive<string>>>,
         )) {
-          if (v !== undefined) items.push(style(v, name as WritableStyleKey));
+          if (v !== undefined) items.push(style(name as WritableStyleKey, v));
         }
         break;
       case 'styleProp':
         for (const [name, v] of Object.entries(
           value as Record<string, Reactive<string>>,
         )) {
-          if (v !== undefined) items.push(styleProp(v, name));
+          if (v !== undefined) items.push(styleProp(name, v));
         }
         break;
       case 'on':
@@ -200,7 +200,7 @@ const _propsToItems = (props: PatchProps): ToAnyPatchItem[] => {
         }
         break;
       default:
-        items.push(attr(value, key));
+        items.push(attr(key, value));
     }
   }
   return items;

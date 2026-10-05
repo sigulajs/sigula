@@ -53,7 +53,7 @@ describe('patch', () => {
 
   it('attr', async () => {
     const s = sig('red');
-    render(html`<div ${patch(attr(s, 'data-color'))}></div>`, document.body);
+    render(html`<div ${patch(attr('data-color', s))}></div>`, document.body);
     const div = document.querySelector('div') as Element;
     expect(div.getAttribute('data-color')).toBe('red');
     s.forceUpdate('blue');
@@ -63,7 +63,7 @@ describe('patch', () => {
 
   it('style', async () => {
     const s = sig('red');
-    render(html`<div ${patch(style(s, 'color'))}></div>`, document.body);
+    render(html`<div ${patch(style('color', s))}></div>`, document.body);
     const div = document.querySelector('div') as HTMLElement;
     expect(div.style.color).toBe('red');
     s.forceUpdate('blue');
@@ -73,7 +73,7 @@ describe('patch', () => {
 
   it('styleProp', async () => {
     const s = sig('10px');
-    render(html`<div ${patch(styleProp(s, '--size'))}></div>`, document.body);
+    render(html`<div ${patch(styleProp('--size', s))}></div>`, document.body);
     const div = document.querySelector('div') as HTMLElement;
     expect(div.style.getPropertyValue('--size')).toBe('10px');
     s.forceUpdate('20px');
@@ -83,7 +83,7 @@ describe('patch', () => {
 
   it('toggleClass', async () => {
     const s = sig(true);
-    render(html`<div ${patch(toggleClass(s, 'on'))}></div>`, document.body);
+    render(html`<div ${patch(toggleClass('on', s))}></div>`, document.body);
     const div = document.querySelector('div') as Element;
     expect(div.classList.contains('on')).toBe(true);
     s.forceUpdate(false);
@@ -94,7 +94,7 @@ describe('patch', () => {
   it('toggleClasses', async () => {
     const s = sig(true);
     render(
-      html`<div ${patch(toggleClasses(s, 'a', 'b'))}></div>`,
+      html`<div ${patch(toggleClasses(['a', 'b'], s))}></div>`,
       document.body,
     );
     const div = document.querySelector('div') as Element;
@@ -147,7 +147,7 @@ describe('patch', () => {
 
   it('throws when the key is missing', () => {
     const node = document.createElement('div');
-    const item = attr('x', 'k')(node);
+    const item = attr('k', 'x')(node);
     expect(() => item.cmd('x', {node, extra: []})).toThrow('E4');
   });
 
@@ -172,7 +172,7 @@ describe('patch', () => {
     // calling the same template literal site twice hits the template cache,
     // which locates slots by index instead of by marker
     const make = (s: Sig<string>) =>
-      html`<div ${patch(id(s), attr(s, 'data-x'))}></div>`;
+      html`<div ${patch(id(s), attr('data-x', s))}></div>`;
 
     const first = sig('one');
     render(make(first), document.body);
@@ -277,7 +277,7 @@ describe('patch', () => {
   it('props: composes with patch items', () => {
     const s = sig('x');
     render(
-      html`<div ${patch({id: 'a'}, attr(s, 'data-x'))}></div>`,
+      html`<div ${patch({id: 'a'}, attr('data-x', s))}></div>`,
       document.body,
     );
     const div = document.querySelector('div') as Element;

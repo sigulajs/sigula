@@ -14,7 +14,7 @@ describe('html', () => {
 
   it('reports the position guard when a slot changes kind between renders of one call site', () => {
     const cell = (live: boolean) =>
-      html`<td>${live ? patch(toggleClass(sig('on'), 'hot')) : text('-')}</td>`;
+      html`<td>${live ? patch(toggleClass('hot', sig('on'))) : text('-')}</td>`;
 
     render(cell(false), document.body);
     expect(document.body.innerHTML).toBe('<td>-</td>');
@@ -91,7 +91,7 @@ describe('html', () => {
       i === 0 ? '<ul><li ' : i === slots ? '></li></ul>' : '></li><li ',
     ) as unknown as TemplateStringsArray;
 
-    render(html(strs, ...sigs.map((s) => patch(attr(s, 'data-v')))), host);
+      render(html(strs, ...sigs.map((s) => patch(attr('data-v', s)))), host);
 
     const li = host.querySelectorAll('li');
     expect(li.length).toBe(slots);
@@ -107,7 +107,7 @@ describe('html', () => {
         i === 0 ? '<ul><li ' : i === slots ? '></li></ul>' : '></li><li ',
       ) as unknown as TemplateStringsArray;
 
-      render(html(strs, ...sigs.map((s) => patch(attr(s, 'data-v')))), host);
+      render(html(strs, ...sigs.map((s) => patch(attr('data-v', s)))), host);
 
       const li = host.querySelectorAll('li');
       expect(li.length).toBe(slots);
