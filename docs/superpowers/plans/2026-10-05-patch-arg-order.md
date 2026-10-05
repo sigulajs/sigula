@@ -395,6 +395,11 @@ git commit -m "docs: key-first patch command arguments"
 
 ### Task 3: Update the example app
 
+> **Reverted:** during execution the example was reverted. `examples/filtertodos`
+> is a standalone project pinned to the released `sigula@1.0.3`, so it stays on
+> the old order to keep compiling against its dependency, and will be updated
+> when the next version is released. See the spec's "Scope of the change".
+
 **Files:**
 - Modify: `examples/filtertodos/src/main.ts`
 

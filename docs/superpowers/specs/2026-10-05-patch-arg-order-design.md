@@ -108,9 +108,11 @@ All call sites move to the new order; there are no aliases or overloads:
 - `src/test/html.test.ts` — `attr` and `toggleClass` call sites.
 - `README.md` — the `attr`, `style`, `styleProp`, `toggleClass`, `toggleClasses`
   signature blocks and examples, plus the Quick Start `style(...)` example.
-- `examples/filtertodos/src/main.ts` — its `style(...)` call.
 
-`package.json`'s version is not changed here.
+The example app `examples/filtertodos` is a standalone project pinned to the
+released `sigula@1.0.3`. It is intentionally left on the old order so it keeps
+compiling against its pinned dependency, and is updated when the next version is
+released. `package.json`'s version is not changed here.
 
 ## Testing
 
@@ -138,4 +140,5 @@ migration section (breaking change accepted without a compat shim).
    and signature.
 3. `_propsToItems` emits the new order and all props-based behavior is unchanged.
 4. All tests and typecheck pass, and no old-order call sites remain in `src`,
-   tests, README, or examples.
+   tests, or the README. The example app stays pinned to `sigula@1.0.3` and keeps
+   the old order until the next release.
