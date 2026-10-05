@@ -1,10 +1,24 @@
 import {err} from './err';
 
+/**
+ * An inclusive range of sibling nodes (`start` through `end`).
+ *
+ * @group Low-level API
+ */
 export interface Boundary {
+  /** The first node in the range. */
   start: Node;
+  /** The last node in the range. */
   end: Node;
 }
 
+/**
+ * Visits every node from `b.start` through `b.end`.
+ *
+ * @param b - the boundary to walk.
+ * @param fn - called with each node.
+ * @group Low-level API
+ */
 // Visits every node from start through end. Callers capture nextSibling before
 // mutating, so the walk survives removals and moves.
 export const walkBoundary = (b: Boundary, fn: (node: Node) => void) => {
@@ -17,12 +31,26 @@ export const walkBoundary = (b: Boundary, fn: (node: Node) => void) => {
   }
 };
 
+/**
+ * Removes every node in the boundary. No-op if the boundary has no parent.
+ *
+ * @param b - the boundary to remove.
+ * @group Low-level API
+ */
 export const removeBoundary = (b: Boundary) => {
   const parent = b.start.parentNode;
   if (!parent) return;
   walkBoundary(b, (node) => parent.removeChild(node));
 };
 
+/**
+ * Wraps a node in a {@link Boundary}. A `DocumentFragment` spans its first and
+ * last child; any other node covers itself. Throws `E2` on an empty fragment.
+ *
+ * @param node - the node to wrap.
+ * @returns the node's boundary.
+ * @group Low-level API
+ */
 export const toBoundary = (node: Node): Boundary => {
   const b =
     node.nodeType === Node.DOCUMENT_FRAGMENT_NODE
@@ -32,6 +60,15 @@ export const toBoundary = (node: Node): Boundary => {
   return b as Boundary;
 };
 
+/**
+ * Replaces an entire boundary with `node` and returns the new boundary. Throws
+ * `E3` if the old boundary has no parent.
+ *
+ * @param old - the boundary to replace.
+ * @param node - the replacement node.
+ * @returns the boundary of the inserted node.
+ * @group Low-level API
+ */
 export const replaceWithNode = (old: Boundary, node: Node): Boundary => {
   const newBoundary = toBoundary(node);
   const parent = old.start.parentNode;
