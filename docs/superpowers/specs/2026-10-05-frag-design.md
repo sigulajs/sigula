@@ -95,10 +95,10 @@ Create `src/test/frag.test.ts`:
 
 ## Docs
 
-Add a `frag` subsection to the README (near the other view producers, in the
-Templates section): the signature, an example, the no-wrapper flat-composition
-behavior, and the empty case. Add `frag` to the existing View-producer
-enumerations in the `html` and `View` sections.
+Add a `frag` subsection to the README Control flow section, next to `list`: the
+signature, an example, the no-wrapper flat-composition behavior, and the empty
+case. Add `frag` to the existing View-producer enumerations in the `html` and
+`View` sections.
 
 ## Acceptance criteria
 
