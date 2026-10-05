@@ -116,6 +116,46 @@ describe('list', () => {
     expect(document.body.innerHTML).toBe('');
   });
 
+  it('disposes nodes when the last edge item swaps its node', async () => {
+    const mode = sig(true);
+    const dispose = render(
+      list([1, 2, 3], (n) =>
+        n === 3
+          ? view(mode, (v) => (v ? html`<i>3</i>` : html`<b>3</b>`))
+          : text(String(n)),
+      ),
+      document.body,
+    );
+    expect(document.body.innerHTML).toBe('12<i>3</i>');
+
+    mode.update(false);
+    await Promise.resolve();
+    expect(document.body.innerHTML).toBe('12<b>3</b>');
+
+    dispose();
+    expect(document.body.innerHTML).toBe('');
+  });
+
+  it('disposes nodes when a middle item swaps its node', async () => {
+    const mode = sig(true);
+    const dispose = render(
+      list([1, 2, 3], (n) =>
+        n === 2
+          ? view(mode, (v) => (v ? html`<i>2</i>` : html`<b>2</b>`))
+          : text(String(n)),
+      ),
+      document.body,
+    );
+    expect(document.body.innerHTML).toBe('1<i>2</i>3');
+
+    mode.update(false);
+    await Promise.resolve();
+    expect(document.body.innerHTML).toBe('1<b>2</b>3');
+
+    dispose();
+    expect(document.body.innerHTML).toBe('');
+  });
+
   it('nests lists', () => {
     render(
       list([1, 2], (n) => list([n, n], (m) => text(String(m)))),
