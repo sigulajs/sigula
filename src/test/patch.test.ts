@@ -10,7 +10,7 @@ import {
   type Sig,
   sig,
   style,
-  styleProperty,
+  styleProp,
   toggleClass,
   toggleClasses,
   val,
@@ -71,10 +71,10 @@ describe('patch', () => {
     expect(div.style.color).toBe('blue');
   });
 
-  it('styleProperty', async () => {
+  it('styleProp', async () => {
     const s = sig('10px');
     render(
-      html`<div ${patch(styleProperty(s, '--size'))}></div>`,
+      html`<div ${patch(styleProp(s, '--size'))}></div>`,
       document.body,
     );
     const div = document.querySelector('div') as HTMLElement;

@@ -88,14 +88,14 @@ export const style = <T>(
   key: WritableStyleKey,
 ): ToPatchItem<T> => _toPatchItem(source, [key], styleCmd);
 
-const stylePropertyCmd = <T>(val: T, ctx: PatchContext) => {
+const stylePropCmd = <T>(val: T, ctx: PatchContext) => {
   (ctx.node as HTMLElement).style.setProperty(_key(ctx), String(val));
 };
 
-export const styleProperty = <T>(
+export const styleProp = <T>(
   source: T | Sig<T>,
   key: string,
-): ToPatchItem<T> => _toPatchItem(source, [key], stylePropertyCmd);
+): ToPatchItem<T> => _toPatchItem(source, [key], stylePropCmd);
 
 const toggleClassCmd = <T>(val: T, ctx: PatchContext) => {
   (ctx.node as Element).classList.toggle(_key(ctx), Boolean(val));

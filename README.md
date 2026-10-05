@@ -489,16 +489,16 @@ html`<span ${patch(style(color, 'color'))}>text</span>`;
 
 `WritableStyleKey` is the union of `CSSStyleDeclaration` keys whose values are strings.
 
-#### `styleProperty`
+#### `styleProp`
 
 ```ts
-const styleProperty: <T>(source: T | Sig<T>, key: string) => ToPatchItem<T>;
+const styleProp: <T>(source: T | Sig<T>, key: string) => ToPatchItem<T>;
 ```
 
 Sets a style property via `CSSStyleDeclaration.setProperty`. Use this for custom properties (`--my-var`) or untyped names.
 
 ```ts
-html`<div ${patch(styleProperty(size, '--size'))}></div>`;
+html`<div ${patch(styleProp(size, '--size'))}></div>`;
 ```
 
 #### `toggleClass`
@@ -710,7 +710,7 @@ Look yours up here:
 | `E1:<index>` | `at` | Array index out of range. |
 | `E2` | `toBoundary` | Cannot build a boundary from an empty fragment. |
 | `E3` | `replaceWithNode` | The old boundary has no `parentNode`. |
-| `E4` | `patch` | A keyed command (`attr`, `style`, `styleProperty`, `toggleClass`) was given no key. |
+| `E4` | `patch` | A keyed command (`attr`, `style`, `styleProp`, `toggleClass`) was given no key. |
 | `E5` | `patch` | `act` was given no function. |
 | `E6` | `patch` | `on` was given no event type. |
 | `E7` | `repeat` | The rendered items have no parent node. |
