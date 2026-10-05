@@ -271,6 +271,7 @@ The core reactive value.
 | `get` | `(): T` | Reads the current value. |
 | `update` | `(v: T): void` | Sets the value and notifies dependents, but only if `isEqual(v, current)` is `false`. |
 | `forceUpdate` | `(v: T): void` | Sets the value and always notifies dependents, even when deeply equal. |
+| `notify` | `(): void` | Enqueues dependents without changing the value; use after mutating a held object or array in place. |
 | `trans` | `(fn: (v: T) => T): void` | Applies `fn` to the current value via `update`, so an equal result is skipped. |
 | `equals` | `(other: unknown): boolean` | `Equatable` implementation; two `Sig`s are equal when their values are deeply equal. |
 | `addBind` | `<C>(bind: Bind<T, C>): void` | Registers a binding. Prefer `createBind` / the `patch`/`text`/`view` APIs. |
@@ -813,6 +814,7 @@ Look yours up here:
 - **Batched.** When a signal changes, its bindings are queued, not run synchronously.
 - **Coalesced per binding.** A binding that is written to multiple times before the microtask flush runs once, reading the signal's final value. `sig.update(1); sig.update(2); sig.update(3)` runs each dependent binding a single time against `3`.
 - **`update` vs `forceUpdate`.** `update` skips work when the new value is deeply equal to the current one; `forceUpdate` always notifies. Use `forceUpdate` when a value is structurally equal but you still need a re-render (for example, mutating an object in place).
+- **`notify` for in-place mutation.** `sig.notify()` re-runs dependents against the current value without setting a new one. Use it after mutating a held object or array in place; `update`/`forceUpdate` set a value.
 - **Error isolation.** A throwing binding does not stop the rest of the queue; the error is logged as `console.error('[Queue] task failed:', error, bind)`.
 - **Deep equality by default.** `update`, `compute`, and `repeat` compare with `isEqual`, so replacing `{a: 1}` with another `{a: 1}` is a no-op.
 
