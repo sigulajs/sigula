@@ -606,7 +606,7 @@ interface Patch {
 #### `PatchProps`
 
 ```ts
-type Reactive<T> = T | Sig<T>;
+type Reactive<T> = T | Sig<T> | undefined;
 
 interface PatchProps {
   id?: Reactive<string>;

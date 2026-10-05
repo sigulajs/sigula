@@ -26,7 +26,7 @@ binding model, while still allowing props to be combined with the command form
 ## API
 
 ```ts
-type Reactive<T> = T | Sig<T>;
+type Reactive<T> = T | Sig<T> | undefined;
 
 export interface PatchProps {
   id?: Reactive<string>;

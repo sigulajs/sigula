@@ -18,7 +18,7 @@ export type ToPatchItem<T> = (el: Element) => PatchItem<T>;
 export type AnyPatchItem = PatchItem<any>;
 export type ToAnyPatchItem = (el: Element) => AnyPatchItem;
 
-type Reactive<T> = T | Sig<T>;
+type Reactive<T> = T | Sig<T> | undefined;
 
 export interface PatchProps {
   id?: Reactive<string>;
@@ -26,7 +26,9 @@ export interface PatchProps {
   class?: Record<string, Reactive<boolean>>;
   style?: Partial<Record<WritableStyleKey, Reactive<string>>>;
   styleProp?: Record<string, Reactive<string>>;
-  on?: {[K in keyof HTMLElementEventMap]?: (ev: HTMLElementEventMap[K]) => void};
+  on?: {
+    [K in keyof HTMLElementEventMap]?: (ev: HTMLElementEventMap[K]) => void;
+  };
   [attr: string]: unknown;
 }
 
@@ -113,10 +115,8 @@ const stylePropCmd = <T>(val: T, ctx: PatchContext) => {
   (ctx.node as HTMLElement).style.setProperty(_key(ctx), String(val));
 };
 
-export const styleProp = <T>(
-  source: T | Sig<T>,
-  key: string,
-): ToPatchItem<T> => _toPatchItem(source, [key], stylePropCmd);
+export const styleProp = <T>(source: T | Sig<T>, key: string): ToPatchItem<T> =>
+  _toPatchItem(source, [key], stylePropCmd);
 
 const toggleClassCmd = <T>(val: T, ctx: PatchContext) => {
   (ctx.node as Element).classList.toggle(_key(ctx), Boolean(val));
@@ -180,10 +180,10 @@ const _propsToItems = (props: PatchProps): ToAnyPatchItem[] => {
     if (value === undefined) continue;
     switch (key) {
       case 'id':
-        items.push(id(value as Reactive<string>));
+        items.push(id(value as NonNullable<Reactive<string>>));
         break;
       case 'val':
-        items.push(val(value as Reactive<string>));
+        items.push(val(value as NonNullable<Reactive<string>>));
         break;
       case 'class':
         for (const [token, v] of Object.entries(

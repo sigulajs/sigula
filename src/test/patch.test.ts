@@ -6,7 +6,6 @@ import {
   id,
   on,
   patch,
-  type PatchProps,
   render,
   type Sig,
   sig,
@@ -74,10 +73,7 @@ describe('patch', () => {
 
   it('styleProp', async () => {
     const s = sig('10px');
-    render(
-      html`<div ${patch(styleProp(s, '--size'))}></div>`,
-      document.body,
-    );
+    render(html`<div ${patch(styleProp(s, '--size'))}></div>`, document.body);
     const div = document.querySelector('div') as HTMLElement;
     expect(div.style.getPropertyValue('--size')).toBe('10px');
     s.forceUpdate('20px');
@@ -295,10 +291,27 @@ describe('patch', () => {
   });
 
   it('props: skips undefined values', () => {
-    const props = {} as PatchProps;
-    (props as Record<string, unknown>)['data-x'] = undefined;
-    render(html`<div ${patch(props)}></div>`, document.body);
-    expect(document.querySelector('div')?.hasAttribute('data-x')).toBe(false);
+    const maybe: string | undefined = undefined;
+    render(
+      html`<input ${patch({id: maybe, 'data-x': maybe})} />`,
+      document.body,
+    );
+    const input = document.querySelector('input') as HTMLInputElement;
+    expect(input.id).toBe('');
+    expect(input.hasAttribute('data-x')).toBe(false);
+  });
+
+  it('props: skips undefined nested entries', () => {
+    const maybe: boolean | undefined = undefined;
+    render(html`<div ${patch({class: {on: maybe}})}></div>`, document.body);
+    expect(document.querySelector('div')?.classList.contains('on')).toBe(false);
+  });
+
+  it('props: coerces arbitrary attributes to strings', () => {
+    render(html`<input ${patch({disabled: false})} />`, document.body);
+    expect(document.querySelector('input')?.getAttribute('disabled')).toBe(
+      'false',
+    );
   });
 
   it('props: zero-argument patch is a no-op', () => {
