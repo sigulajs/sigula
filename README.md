@@ -665,6 +665,23 @@ html`<ul>${repeat(todos, {
 
 `key` must be unique and stable for a given item. `compare` is useful when item identity is structural but you want to force or skip updates.
 
+#### `list`
+
+```ts
+const list: <T>(
+  items: readonly T[],
+  viewFn: (item: T, index: number) => AnyView,
+) => View;
+```
+
+Renders a fixed array in order. `viewFn` is called once per item with the item and its 0-based index, and each returned `AnyView` is appended in sequence. There is no keying or reconciliation and no reactive source — any reactivity comes from the views `viewFn` returns. Use [`repeat`](#repeat) for reactive, keyed lists.
+
+```ts
+html`<ul>${list(items, (item, i) => html`<li>${i}: ${text(item)}</li>`)}</ul>`;
+```
+
+An empty array renders `<!--empty-list-->`.
+
 ### Rendering
 
 #### `render`
