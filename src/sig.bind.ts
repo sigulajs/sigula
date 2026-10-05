@@ -1,5 +1,5 @@
 import type {Cmd, CmdContext} from './cmd';
-import {type Equatable, isEqual} from './eq';
+import {type Eq, type Equatable, eq} from './eq';
 
 export interface Bind<T, C extends CmdContext> {
   sig: Sig<T>;
@@ -72,19 +72,18 @@ class Queue {
 
 const QUEUE = new Queue();
 
-type EqFn<T> = (a: T, b: T) => boolean;
 export class Sig<T> implements Equatable {
   private _val: T;
   private _binds: AnyBind[] = [];
-  private _eqFn: EqFn<T>;
+  private _eq: Eq<T>;
 
-  constructor(val: T, opts?: {isEqual?: EqFn<T>}) {
+  constructor(val: T, opts?: {eq?: Eq<T>}) {
     this._val = val;
-    this._eqFn = opts?.isEqual ?? isEqual;
+    this._eq = opts?.eq ?? eq;
   }
 
   equals(b: unknown) {
-    if (b instanceof Sig) return this._eqFn(this.get(), b.get());
+    if (b instanceof Sig) return this._eq(this.get(), b.get());
     return false;
   }
 
@@ -98,7 +97,7 @@ export class Sig<T> implements Equatable {
   }
 
   update(v: T) {
-    if (isEqual(v, this._val)) return;
+    if (this._eq(v, this._val)) return;
     this.forceUpdate(v);
   }
 

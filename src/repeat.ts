@@ -6,7 +6,7 @@ import {
   walkBoundary,
 } from './boundary';
 import type {CmdContext} from './cmd';
-import {isEqual} from './eq';
+import {eq} from './eq';
 import {err} from './err';
 import {createBind, removeBind, type Sig} from './sig.bind';
 import {at} from './utils';
@@ -15,7 +15,7 @@ import {type AnyView, replaceWithView, type View} from './view';
 export type RepeatProp<T> = {
   key: (item: T) => string;
   view: (item: T) => AnyView;
-  isEqual?: (a: T, b: T) => boolean;
+  eq?: (a: T, b: T) => boolean;
 };
 
 interface Container {
@@ -68,7 +68,7 @@ const repeatCmd = <T>(items: T[], ctx: RepeatContext<T>) => {
   const parent = start.parentNode;
   if (!parent) err('E7');
 
-  const compare = ctx.prop.isEqual ?? isEqual;
+  const compare = ctx.prop.eq ?? eq;
   const newKeys = items.map((item) => ctx.prop.key(item));
   const tracks = ctx.tracks;
 

@@ -1,58 +1,58 @@
 import {describe, expect, it} from 'vitest';
-import {isEqual} from '#/eq.js';
+import {eq} from '#/eq.js';
 import {html, render, sig, text} from '..';
 
 describe('isEqual', () => {
   describe('pinned current behaviour', () => {
     it('compares primitives', () => {
-      expect(isEqual(1, 1)).toBe(true);
-      expect(isEqual(1, 2)).toBe(false);
-      expect(isEqual('a', 'a')).toBe(true);
-      expect(isEqual('a', 'b')).toBe(false);
-      expect(isEqual<unknown>(1, '1')).toBe(false);
-      expect(isEqual(true, true)).toBe(true);
+      expect(eq(1, 1)).toBe(true);
+      expect(eq(1, 2)).toBe(false);
+      expect(eq('a', 'a')).toBe(true);
+      expect(eq('a', 'b')).toBe(false);
+      expect(eq<unknown>(1, '1')).toBe(false);
+      expect(eq(true, true)).toBe(true);
     });
 
     it('handles null and undefined', () => {
-      expect(isEqual(null, null)).toBe(true);
-      expect(isEqual(undefined, undefined)).toBe(true);
-      expect(isEqual(null, undefined)).toBe(false);
-      expect(isEqual(null, {})).toBe(false);
-      expect(isEqual(undefined, {})).toBe(false);
+      expect(eq(null, null)).toBe(true);
+      expect(eq(undefined, undefined)).toBe(true);
+      expect(eq(null, undefined)).toBe(false);
+      expect(eq(null, {})).toBe(false);
+      expect(eq(undefined, {})).toBe(false);
     });
 
     it('treats -0 and 0 as equal', () => {
-      expect(isEqual(-0, 0)).toBe(true);
+      expect(eq(-0, 0)).toBe(true);
     });
 
     it('reports NaN as not equal to itself', () => {
       // typeof NaN !== 'object', so the object path is never reached. Pinned
       // deliberately; changing it is a separate decision, not part of this work.
-      expect(isEqual(Number.NaN, Number.NaN)).toBe(false);
+      expect(eq(Number.NaN, Number.NaN)).toBe(false);
     });
 
     it('compares arrays elementwise and order-sensitively', () => {
-      expect(isEqual([1, 2], [1, 2])).toBe(true);
-      expect(isEqual([1, 2], [2, 1])).toBe(false);
-      expect(isEqual([1, 2], [1, 2, 3])).toBe(false);
-      expect(isEqual([], [])).toBe(true);
+      expect(eq([1, 2], [1, 2])).toBe(true);
+      expect(eq([1, 2], [2, 1])).toBe(false);
+      expect(eq([1, 2], [1, 2, 3])).toBe(false);
+      expect(eq([], [])).toBe(true);
     });
 
     it('compares objects by own enumerable keys', () => {
-      expect(isEqual({a: 1}, {a: 1})).toBe(true);
-      expect(isEqual({a: 1}, {a: 2})).toBe(false);
-      expect(isEqual({a: 1}, {a: 1, b: 2})).toBe(false);
-      expect(isEqual({a: 1}, {b: 1})).toBe(false);
-      expect(isEqual({}, {})).toBe(true);
+      expect(eq({a: 1}, {a: 1})).toBe(true);
+      expect(eq({a: 1}, {a: 2})).toBe(false);
+      expect(eq({a: 1}, {a: 1, b: 2})).toBe(false);
+      expect(eq({a: 1}, {b: 1})).toBe(false);
+      expect(eq({}, {})).toBe(true);
       // key order is not part of identity: JSON round-trips and spread merges
       // reorder keys routinely, and a positional key compare would turn every
       // reorder into a spurious re-render
-      expect(isEqual({a: 1, b: 2}, {b: 2, a: 1})).toBe(true);
+      expect(eq({a: 1, b: 2}, {b: 2, a: 1})).toBe(true);
     });
 
     it('recurses through nested structures', () => {
-      expect(isEqual({a: {b: [1, {c: 2}]}}, {a: {b: [1, {c: 2}]}})).toBe(true);
-      expect(isEqual({a: {b: [1, {c: 2}]}}, {a: {b: [1, {c: 3}]}})).toBe(false);
+      expect(eq({a: {b: [1, {c: 2}]}}, {a: {b: [1, {c: 2}]}})).toBe(true);
+      expect(eq({a: {b: [1, {c: 2}]}}, {a: {b: [1, {c: 3}]}})).toBe(false);
     });
 
     it('compares null-prototype objects', () => {
@@ -60,27 +60,27 @@ describe('isEqual', () => {
       const b = Object.create(null) as Record<string, unknown>;
       a.k = 1;
       b.k = 1;
-      expect(isEqual(a, b)).toBe(true);
+      expect(eq(a, b)).toBe(true);
       b.k = 2;
-      expect(isEqual(a, b)).toBe(false);
+      expect(eq(a, b)).toBe(false);
     });
 
     it('compares Date by timestamp', () => {
-      expect(isEqual(new Date(5), new Date(5))).toBe(true);
-      expect(isEqual(new Date(5), new Date(6))).toBe(false);
+      expect(eq(new Date(5), new Date(5))).toBe(true);
+      expect(eq(new Date(5), new Date(6))).toBe(false);
     });
 
     it('compares RegExp by source', () => {
-      expect(isEqual(/a/, /a/)).toBe(true);
-      expect(isEqual(/a/, /b/)).toBe(false);
+      expect(eq(/a/, /a/)).toBe(true);
+      expect(eq(/a/, /b/)).toBe(false);
     });
 
     it('compares Map by size then keys and values', () => {
-      expect(isEqual(new Map([[1, 2]]), new Map([[1, 2]]))).toBe(true);
-      expect(isEqual(new Map([[1, 2]]), new Map([[1, 3]]))).toBe(false);
-      expect(isEqual(new Map([[1, 2]]), new Map([[2, 1]]))).toBe(false);
+      expect(eq(new Map([[1, 2]]), new Map([[1, 2]]))).toBe(true);
+      expect(eq(new Map([[1, 2]]), new Map([[1, 3]]))).toBe(false);
+      expect(eq(new Map([[1, 2]]), new Map([[2, 1]]))).toBe(false);
       expect(
-        isEqual(
+        eq(
           new Map([[1, 2]]),
           new Map([
             [1, 2],
@@ -93,8 +93,8 @@ describe('isEqual', () => {
     it('compares Set order-sensitively', () => {
       // the Set branch converts both to arrays and compares positionally, so
       // insertion order matters. Pinned deliberately.
-      expect(isEqual(new Set([1, 2]), new Set([1, 2]))).toBe(true);
-      expect(isEqual(new Set([1, 2]), new Set([2, 1]))).toBe(false);
+      expect(eq(new Set([1, 2]), new Set([1, 2]))).toBe(true);
+      expect(eq(new Set([1, 2]), new Set([2, 1]))).toBe(false);
     });
 
     it('defers to a custom equals implementation', () => {
@@ -112,23 +112,23 @@ describe('isEqual', () => {
       // isEqual(yes, no) is true while isEqual(no, yes) is false, because
       // eq.ts calls a.equals(b). Pinned deliberately — making it symmetric is a
       // separate decision, not part of this work.
-      expect(isEqual(new Yes(), new No())).toBe(true);
-      expect(isEqual(new Yes(), new Yes())).toBe(true);
-      expect(isEqual(new No(), new Yes())).toBe(false);
+      expect(eq(new Yes(), new No())).toBe(true);
+      expect(eq(new Yes(), new Yes())).toBe(true);
+      expect(eq(new No(), new Yes())).toBe(false);
     });
 
     it('ignores a non-callable equals property', () => {
       // isEquatable requires typeof equals === 'function', so these fall
       // through to the key comparison and are decided by its value
-      expect(isEqual({equals: 1}, {equals: 2})).toBe(false);
-      expect(isEqual({equals: 1}, {equals: 1})).toBe(true);
+      expect(eq({equals: 1}, {equals: 2})).toBe(false);
+      expect(eq({equals: 1}, {equals: 1})).toBe(true);
     });
 
     it('compares instances of the same class', () => {
       class P {
         x = 1;
       }
-      expect(isEqual(new P(), new P())).toBe(true);
+      expect(eq(new P(), new P())).toBe(true);
     });
   });
 
@@ -183,8 +183,8 @@ describe('isEqual', () => {
 
     for (const [name, a, b] of crossType) {
       it(`returns false for ${name}`, () => {
-        expect(isEqual(a as unknown, b as unknown)).toBe(false);
-        expect(isEqual(b as unknown, a as unknown)).toBe(false);
+        expect(eq(a as unknown, b as unknown)).toBe(false);
+        expect(eq(b as unknown, a as unknown)).toBe(false);
       });
     }
   });

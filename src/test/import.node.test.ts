@@ -7,6 +7,6 @@ describe('module import', () => {
 
     const mod = await import('..');
 
-    expect(mod.isEqual([1, 2], [1, 2])).toBe(true);
+    expect(mod.eq([1, 2], [1, 2])).toBe(true);
   });
 });

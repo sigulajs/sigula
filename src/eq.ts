@@ -2,6 +2,8 @@ export interface Equatable {
   equals(other: unknown): boolean;
 }
 
+export type Eq<T> = (a: T, b: T) => boolean;
+
 const isEquatable = (value: unknown): value is Equatable =>
   typeof value === 'object' &&
   value !== null &&
@@ -10,7 +12,7 @@ const isEquatable = (value: unknown): value is Equatable =>
 
 export type UnknownRecord = Record<string, unknown>;
 
-export const isEqual = <T>(a: T, b: T): boolean => {
+export const eq = <T>(a: T, b: T): boolean => {
   if (a === b) return true;
   if (typeof a !== typeof b) return false;
 
@@ -23,7 +25,7 @@ export const isEqual = <T>(a: T, b: T): boolean => {
   if (Array.isArray(a) && Array.isArray(b)) {
     if (a.length !== b.length) return false;
     for (let i = 0; i < a.length; i++) {
-      if (!isEqual(a[i], b[i])) return false;
+      if (!eq(a[i], b[i])) return false;
     }
     return true;
   }
@@ -41,7 +43,7 @@ export const isEqual = <T>(a: T, b: T): boolean => {
   if (a instanceof Map && b instanceof Map) {
     if (a.size !== b.size) return false;
     for (const [key, val] of a) {
-      if (!b.has(key) || !isEqual(val, b.get(key))) return false;
+      if (!b.has(key) || !eq(val, b.get(key))) return false;
     }
     return true;
   }
@@ -51,7 +53,7 @@ export const isEqual = <T>(a: T, b: T): boolean => {
     if (a.size !== b.size) return false;
     const arrA = Array.from(a);
     const arrB = Array.from(b);
-    return isEqual(arrA, arrB);
+    return eq(arrA, arrB);
   }
 
   // Object & Record
@@ -76,7 +78,7 @@ export const isEqual = <T>(a: T, b: T): boolean => {
   for (let i = 0; i < aKeys.length; i++) {
     const key = aKeys[i] as string;
     if (!Object.hasOwn(bo, key)) return false;
-    if (!isEqual(ao[key], bo[key])) return false;
+    if (!eq(ao[key], bo[key])) return false;
   }
 
   return true;
