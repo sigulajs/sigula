@@ -33,7 +33,7 @@ interface ApiSymbol {
   typeParams: string[];
   params: string[];
   returns: string;
-  example: string;
+  examples: string[];
   members: Member[];
 }
 
@@ -155,7 +155,7 @@ const parseSymbol = (docText: string, declLines: string[]): ApiSymbol => {
     typeParams: many('typeParam'),
     params: many('param'),
     returns: tags.find((t) => t.name === 'returns')?.text ?? '',
-    example: tags.find((t) => t.name === 'example')?.text ?? '',
+    examples: many('example'),
     members,
   };
 };
@@ -226,11 +226,27 @@ while (i < lines.length) {
   i++;
 }
 
+const uniqPush = (target: string[], add: string[]): void => {
+  for (const value of add) {
+    if (value && !target.includes(value)) target.push(value);
+  }
+};
+
 const byName = new Map<string, ApiSymbol>();
 for (const s of collected) {
   const existing = byName.get(s.name);
-  if (existing) existing.signatures.push(...s.signatures);
-  else byName.set(s.name, s);
+  if (!existing) {
+    byName.set(s.name, s);
+    continue;
+  }
+  existing.signatures.push(...s.signatures);
+  uniqPush(existing.params, s.params);
+  uniqPush(existing.typeParams, s.typeParams);
+  uniqPush(existing.examples, s.examples);
+  if (!existing.returns) existing.returns = s.returns;
+  if (s.summary && s.summary !== existing.summary) {
+    existing.summary = `${existing.summary}\n\n${s.summary}`;
+  }
 }
 
 const grouped = new Map<string, ApiSymbol[]>();
@@ -270,7 +286,12 @@ for (const g of [...GROUP_ORDER, 'Other']) {
       md += s.params.map(renderTag).join('\n') + '\n\n';
     }
     if (s.returns) md += `**Returns** ${s.returns}\n\n`;
-    if (s.example) md += `**Example**\n\n${s.example}\n\n`;
+    if (s.examples.length) {
+      md += '**Example**\n\n';
+      for (const ex of s.examples) {
+        md += (ex.startsWith('```') ? ex : `\`\`\`ts\n${ex}\n\`\`\``) + '\n\n';
+      }
+    }
     if (s.members.length) {
       md += '**Members**\n\n';
       md += s.members.map((m) => `- \`${m.name}\` — ${m.doc}`).join('\n') + '\n\n';

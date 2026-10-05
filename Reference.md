@@ -242,15 +242,21 @@ function compute<S extends SigRecord, T>(source: S, fn: (v: ValRecord<S>) => T):
 Derives a signal from one source signal. The result recomputes whenever
 `source` changes.
 
+Derives a signal from a record of signals; `fn` receives the matching record
+of values. The result recomputes whenever any source changes.
+
 **Type parameters**
 
 - `S` — the source value type.
 - `T` — the derived value type.
+- `S` — the signal record type.
 
 **Parameters**
 
 - `source` — the source signal.
 - `fn` — maps the source value to the derived value.
+- `source` — a record of signals.
+- `fn` — maps the record of values to the derived value.
 
 **Returns** a `DerivedSig` for the mapped value.
 
@@ -259,6 +265,10 @@ Derives a signal from one source signal. The result recomputes whenever
 ```ts
 const x = sig(1);
 const doubled = compute(x, (v) => v * 2);
+```
+
+```ts
+const sum = compute({x, y}, (v) => v.x + v.y);
 ```
 
 ## Templates
@@ -527,10 +537,13 @@ interpolated in an attribute position. Each command receives a plain value
 The first argument may be a `PatchProps` object, desugared into the
 commands below in key order, optionally followed by command items.
 
+Declares one or more command bindings to apply to the same element.
+
 **Parameters**
 
 - `props` — a props object.
 - `items` — command items applied after the props.
+- `toPatchItems` — the command items to apply.
 
 **Returns** a `Patch` for `html` to commit.
 
@@ -538,6 +551,10 @@ commands below in key order, optionally followed by command items.
 
 ```ts
 html`<input ${patch({val: name, placeholder: 'name'})} />`;
+```
+
+```ts
+html`<input ${patch(val(name), attr('name', placeholder))} />`;
 ```
 
 ### `id`
