@@ -1,4 +1,5 @@
 export * from './core';
+export * from './frag';
 export * from './html';
 export * from './list';
 export * from './patch';
