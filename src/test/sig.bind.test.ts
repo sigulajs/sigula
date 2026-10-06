@@ -469,4 +469,17 @@ describe('compute record coalescing', () => {
     expect(sum.get()).toBe(30);
     dispose();
   });
+
+  it('recomputes after a detach and re-arm with a pending write', async () => {
+    const a = sig(1);
+    const b = sig(2);
+    const sum = compute({a, b}, (v) => v.a + v.b);
+    const consumer = createBind(sum, {}, () => {});
+    a.update(10);
+    removeBind(consumer);
+    createBind(sum, {}, () => {});
+    b.update(20);
+    await flush();
+    expect(sum.get()).toBe(30);
+  });
 });
