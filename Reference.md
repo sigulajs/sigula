@@ -119,8 +119,9 @@ kinds of interpolation are supported:
 
 Templates are cached per call site, so repeated renders skip parsing. Throws
 `E10` for an empty template, `E11:<expected>:<got>` for an interpolation-count
-mismatch, and `E12` for an unmatched interpolation (a `patch` in content
-position, or a text value in an attribute position).
+mismatch, `E12` for an unmatched interpolation (a `patch` in content position,
+or a text value in an attribute position), and `E13` when a `View` is committed
+more than once.
 
 **Parameters**
 

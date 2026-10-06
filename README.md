@@ -442,6 +442,7 @@ Runtime errors carry a short code in `message` instead of a sentence, so the str
 | `E10` | `html` | The template is empty (an empty tagged template). |
 | `E11:<expected>:<got>` | `html` | Interpolation count does not match the template's slots. |
 | `E12` | `html` | Unmatched interpolation: a `Patch` must sit in an attribute position, a `View`/text value in a content position. |
+| `E13` | `html` | A `View` was committed more than once (reused across templates). |
 
 ## How it compares
 

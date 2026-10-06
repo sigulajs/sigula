@@ -33,6 +33,10 @@ export interface View<T = unknown, C extends CmdContext = any> {
 
   /** The interpolated children of a template view. */
   children?: ChildView[] | undefined;
+
+  // Internal: set once the view has been committed by a template, so a second
+  // commit can be rejected (`E13`).
+  committed?: boolean;
 }
 
 /**

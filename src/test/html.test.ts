@@ -161,4 +161,16 @@ describe('html', () => {
       'E12',
     );
   });
+
+  it('rejects committing the same view twice', () => {
+    const v = text('x');
+    html`<p>${v}</p>`;
+    expect(() => html`<span>${v}</span>`).toThrow('E13');
+  });
+
+  it('rejects committing the same fragment view twice', () => {
+    const v = html`<b>${text('y')}</b>`;
+    html`<p>${v}</p>`;
+    expect(() => html`<p>${v}</p>`).toThrow('E13');
+  });
 });

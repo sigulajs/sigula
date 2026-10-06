@@ -85,6 +85,8 @@ const _toItem = (item: unknown): Patch | AnyView =>
   isPatch(item) || isView(item) ? item : text(item);
 
 const commitView = <T, C extends CmdContext>(view: View<T, C>, node: Node) => {
+  if (view.committed) err('E13');
+  view.committed = true;
   (node as Comment).replaceWith(view.node);
 };
 
@@ -151,8 +153,9 @@ type HtmlItem = Patch | AnyView | TextValue | Sig<any>;
  *
  * Templates are cached per call site, so repeated renders skip parsing. Throws
  * `E10` for an empty template, `E11:<expected>:<got>` for an interpolation-count
- * mismatch, and `E12` for an unmatched interpolation (a `patch` in content
- * position, or a text value in an attribute position).
+ * mismatch, `E12` for an unmatched interpolation (a `patch` in content position,
+ * or a text value in an attribute position), and `E13` when a `View` is committed
+ * more than once.
  *
  * @param strs - the static template strings.
  * @param rawItems - the interpolated views, patches, or text values.
