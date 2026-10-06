@@ -420,3 +420,53 @@ describe('Sig custom comparator', () => {
     expect(s.get()).toEqual({a: 1});
   });
 });
+
+describe('compute record coalescing', () => {
+  it('runs the record fn once per flush when several sources change', async () => {
+    const a = sig(1);
+    const b = sig(2);
+    let calls = 0;
+    const sum = compute({a, b}, (v) => {
+      calls++;
+      return v.a + v.b;
+    });
+    expect(calls).toBe(1);
+
+    a.update(10);
+    b.update(20);
+    await flush();
+
+    expect(calls).toBe(2);
+    expect(sum.get()).toBe(30);
+  });
+
+  it('keeps coalescing after a hide and re-show', async () => {
+    const a = sig(1);
+    const b = sig(2);
+    let calls = 0;
+    const sum = compute({a, b}, (v) => {
+      calls++;
+      return v.a + v.b;
+    });
+
+    const show = sig(true);
+    const dispose = render(
+      html`<p>${view(show, (v) => (v ? text(sum) : text('off')))}</p>`,
+      document.body,
+    );
+
+    show.update(false);
+    await flush();
+    show.update(true);
+    await flush();
+
+    calls = 0;
+    a.update(10);
+    b.update(20);
+    await flush();
+
+    expect(calls).toBe(1);
+    expect(sum.get()).toBe(30);
+    dispose();
+  });
+});

@@ -35,6 +35,7 @@ interface ComputeRecordContext<S extends SigRecord, T> extends CmdContext {
   target: Sig<T>;
   fn: (v: ValRecord<S>) => T;
   entries: ComputeEntry[];
+  group: {queued: boolean};
 }
 
 const computeCmd = <S, T>(s: S, ctx: ComputeContext<S, T>) => {
@@ -70,7 +71,12 @@ const _computeRecord = <S extends SigRecord, T>(
   }
 
   const target = new DerivedSig(fn(vals as ValRecord<S>));
-  const ctx: ComputeRecordContext<S, T> = {target, fn, entries};
+  const ctx: ComputeRecordContext<S, T> = {
+    target,
+    fn,
+    entries,
+    group: {queued: false},
+  };
 
   for (const entry of entries) {
     target.addFromBind(createBind(entry[1], ctx, computeRecordCmd));

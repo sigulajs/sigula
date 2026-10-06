@@ -37,9 +37,17 @@ let head = 0;
 let running = false;
 let scheduled = false;
 
+const groupOf = (ctx: object): {queued: boolean} | undefined =>
+  (ctx as {group?: {queued: boolean}}).group;
+
 const enqueue = (binds: readonly AnyBind[]): void => {
   for (const bind of binds) {
     if (bind.queued) continue;
+    const group = groupOf(bind.context);
+    if (group) {
+      if (group.queued) continue;
+      group.queued = true;
+    }
     bind.queued = true;
     queue.push(bind);
   }
@@ -61,6 +69,8 @@ const flush = (): void => {
   try {
     while (head < queue.length) {
       const bind = queue[head++] as AnyBind;
+      const group = groupOf(bind.context);
+      if (group) group.queued = false;
       try {
         const {removed, sig, context, cmd} = bind;
         if (!removed) cmd(sig.get(), context);
