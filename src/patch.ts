@@ -81,9 +81,20 @@ export function patch(
   return {type: 'patch', toPatchItems, cleanBinds: _noop};
 }
 
-// Every patch item is the same shape -- bind `source` to `elem` plus whatever
-// arguments the command needs -- so the whole body lives here once.
-const _toPatchItem =
+/**
+ * Builds a deferred patch item: a factory that resolves against the target
+ * element on mount and pairs a source value with a command. This is the shared
+ * primitive behind `id`, `val`, `attr`, `style`, `styleProp`, `toggleClass`,
+ * `toggleClasses`, `act`, and `on`.
+ *
+ * @typeParam T - the source value type.
+ * @param source - the plain value or `Sig` the command binds.
+ * @param extra - extra command arguments, such as the attribute or style key.
+ * @param cmd - the command run with the value and context.
+ * @returns a factory that builds the `PatchItem` for an element.
+ * @group Low-level API
+ */
+export const toPatchItem =
   <T>(
     source: T | Sig<T>,
     extra: unknown[] | undefined,
@@ -115,7 +126,7 @@ const idCmd = <T>(val: T, ctx: PatchContext) => {
  * @group DOM bindings
  */
 export const id = <T>(source: T | Sig<T>): ToPatchItem<T> =>
-  _toPatchItem(source, undefined, idCmd);
+  toPatchItem(source, undefined, idCmd);
 
 const valCmd = <T>(val: T, ctx: PatchContext) => {
   (ctx.node as unknown as {value: string}).value = String(val);
@@ -130,7 +141,7 @@ const valCmd = <T>(val: T, ctx: PatchContext) => {
  * @group DOM bindings
  */
 export const val = <T>(source: T | Sig<T>): ToPatchItem<T> =>
-  _toPatchItem(source, undefined, valCmd);
+  toPatchItem(source, undefined, valCmd);
 
 const attrCmd = <T>(val: T, ctx: PatchContext) => {
   (ctx.node as Element).setAttribute(_key(ctx), String(val));
@@ -146,7 +157,7 @@ const attrCmd = <T>(val: T, ctx: PatchContext) => {
  * @group DOM bindings
  */
 export const attr = <T>(key: string, source: T | Sig<T>): ToPatchItem<T> =>
-  _toPatchItem(source, [key], attrCmd);
+  toPatchItem(source, [key], attrCmd);
 
 /**
  * The union of `CSSStyleDeclaration` keys whose values are strings.
@@ -179,7 +190,7 @@ const styleCmd = <T>(val: T, ctx: PatchContext) => {
 export const style = <T>(
   key: WritableStyleKey,
   source: T | Sig<T>,
-): ToPatchItem<T> => _toPatchItem(source, [key], styleCmd);
+): ToPatchItem<T> => toPatchItem(source, [key], styleCmd);
 
 const stylePropCmd = <T>(val: T, ctx: PatchContext) => {
   (ctx.node as HTMLElement).style.setProperty(_key(ctx), String(val));
@@ -200,7 +211,7 @@ const stylePropCmd = <T>(val: T, ctx: PatchContext) => {
  * @group DOM bindings
  */
 export const styleProp = <T>(key: string, source: T | Sig<T>): ToPatchItem<T> =>
-  _toPatchItem(source, [key], stylePropCmd);
+  toPatchItem(source, [key], stylePropCmd);
 
 const toggleClassCmd = <T>(val: T, ctx: PatchContext) => {
   (ctx.node as Element).classList.toggle(_key(ctx), Boolean(val));
@@ -218,7 +229,7 @@ const toggleClassCmd = <T>(val: T, ctx: PatchContext) => {
 export const toggleClass = <T>(
   token: string,
   source: T | Sig<T>,
-): ToPatchItem<T> => _toPatchItem(source, [token], toggleClassCmd);
+): ToPatchItem<T> => toPatchItem(source, [token], toggleClassCmd);
 
 const toggleClassesCmd = <T>(val: T, ctx: PatchContext) => {
   ctx.extra?.forEach((token) => {
@@ -238,7 +249,7 @@ const toggleClassesCmd = <T>(val: T, ctx: PatchContext) => {
 export const toggleClasses = <T>(
   tokens: readonly string[],
   source: T | Sig<T>,
-): ToPatchItem<T> => _toPatchItem(source, [...tokens], toggleClassesCmd);
+): ToPatchItem<T> => toPatchItem(source, [...tokens], toggleClassesCmd);
 
 /**
  * A custom patch callback run on mount and on change.
@@ -269,7 +280,7 @@ const actCmd = <T>(val: T, ctx: PatchContext) => {
  * @group DOM bindings
  */
 export const act = <T>(source: T | Sig<T>, fn: ActFn<T>): ToPatchItem<T> =>
-  _toPatchItem(source, [fn], actCmd);
+  toPatchItem(source, [fn], actCmd);
 
 type _Listener<K extends keyof HTMLElementEventMap> = (
   this: HTMLElement,
@@ -305,7 +316,7 @@ export const on = <K extends keyof HTMLElementEventMap>(
   type: K,
   listener: _Listener<K>,
   options?: boolean | AddEventListenerOptions,
-): ToPatchItem<_Listener<K>> => _toPatchItem(listener, [type, options], onCmd);
+): ToPatchItem<_Listener<K>> => toPatchItem(listener, [type, options], onCmd);
 
 const _propsToItems = (props: PatchProps): ToAnyPatchItem[] => {
   const items: ToAnyPatchItem[] = [];

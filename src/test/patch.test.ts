@@ -11,6 +11,7 @@ import {
   sig,
   style,
   styleProp,
+  toPatchItem,
   toggleClass,
   toggleClasses,
   val,
@@ -143,6 +144,18 @@ describe('patch', () => {
     const ev = new Event('click');
     document.querySelector('button')?.dispatchEvent(ev);
     expect(handler.mock.calls[0]?.[0]).toBe(ev);
+  });
+
+  it('toPatchItem builds a deferred patch item', () => {
+    const node = document.createElement('div');
+    const cmd = vi.fn();
+    const withExtra = toPatchItem('x', ['k'], cmd)(node);
+    expect(withExtra.source).toBe('x');
+    expect(withExtra.context).toEqual({node, extra: ['k']});
+    expect(withExtra.cmd).toBe(cmd);
+
+    const withoutExtra = toPatchItem('y', undefined, cmd)(node);
+    expect(withoutExtra.context).toEqual({node});
   });
 
   it('throws when the key is missing', () => {

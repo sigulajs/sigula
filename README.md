@@ -418,7 +418,7 @@ Full signatures and documentation: [Reference.md](./Reference.md).
 | `list(items, viewFn)` | control flow | `View` (static) |
 | `frag(...views)` | composition | `View` |
 | `render(view \| () => view, node)` | mounting | disposer `() => void` |
-| `createBind`, `removeBind`, `eq`, `toBoundary`, `walkBoundary` | low-level | — |
+| `createBind`, `removeBind`, `eq`, `toBoundary`, `walkBoundary`, `toPatchItem` | low-level | — |
 | `Sig`, `DerivedSig`, `View`, `Patch`, `Reactive<T>`, `Eq<T>`, `Equatable` | types | — |
 
 The full API reference is generated from the TSDoc comments in the source: see [Reference.md](./Reference.md).

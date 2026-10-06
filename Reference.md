@@ -595,6 +595,29 @@ Visits every node from `b.start` through `b.end`.
 - `b` — the boundary to walk.
 - `fn` — called with each node.
 
+### `toPatchItem`
+
+```ts
+const toPatchItem: <T>(source: T | Sig<T>, extra: unknown[] | undefined, cmd: Cmd<T, PatchContext>) => ToPatchItem<T>;
+```
+
+Builds a deferred patch item: a factory that resolves against the target
+element on mount and pairs a source value with a command. This is the shared
+primitive behind `id`, `val`, `attr`, `style`, `styleProp`, `toggleClass`,
+`toggleClasses`, `act`, and `on`.
+
+**Type parameters**
+
+- `T` — the source value type.
+
+**Parameters**
+
+- `source` — the plain value or `Sig` the command binds.
+- `extra` — extra command arguments, such as the attribute or style key.
+- `cmd` — the command run with the value and context.
+
+**Returns** a factory that builds the `PatchItem` for an element.
+
 ### `Sig`
 
 ```ts

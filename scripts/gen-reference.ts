@@ -34,6 +34,7 @@ const ORDER = [
   'eq',
   'toBoundary',
   'walkBoundary',
+  'toPatchItem',
   'Sig',
   'DerivedSig',
   'View',
