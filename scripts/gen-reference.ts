@@ -11,6 +11,7 @@ const out = join(root, 'Reference.md');
 const ORDER = [
   'sig',
   'compute',
+  'effect',
   'html',
   'text',
   'raw',

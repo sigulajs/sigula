@@ -64,6 +64,45 @@ const doubled = compute(x, (v) => v * 2);
 const sum = compute({x, y}, (v) => v.x + v.y);
 ```
 
+### `effect`
+
+```ts
+function effect<S>(source: Sig<S>, fn: (v: S) => void): () => void;
+function effect<S extends SigRecord>(source: S, fn: (v: ValRecord<S>) => void): () => void;
+```
+
+Runs a side effect over one signal: `fn` is called immediately with the
+current value and again whenever the signal changes.
+
+Runs a side effect over a record of signals: `fn` is called immediately with
+the record of current values and again, once per flush, after any source
+changes.
+
+**Type parameters**
+
+- `S` — the source value type.
+- `S` — the signal record type.
+
+**Parameters**
+
+- `source` — the signal to observe.
+- `fn` — the effect, run with the current value.
+- `source` — a record of signals.
+- `fn` — the effect, run with the record of current values.
+
+**Returns** a disposer that detaches the effect.
+
+**Example**
+
+```ts
+const dispose = effect(count, (v) => console.log(v));
+dispose();
+```
+
+```ts
+const dispose = effect({x, y}, (v) => console.log(v.x + v.y));
+```
+
 ### `html`
 
 ```ts

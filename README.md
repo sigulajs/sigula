@@ -227,7 +227,7 @@ const v = text(name);   // Bind{ sig: name, context: {node: <Text>}, cmd: textCm
 name.update('Bob');     // → textCmd('Bob', {node}) → that one node changes
 ```
 
-Because a `Cmd` is just a function, the same model covers DOM writes, derived values, and arbitrary side effects — there is no separate `effect()`/`watch()` API to learn.
+Because a `Cmd` is just a function, the same model covers DOM writes, derived values, and arbitrary side effects. The `effect(source, fn)` helper is thin sugar over `createBind` for the common standalone case: it runs `fn` immediately and again on change, and returns a disposer.
 
 ### Derived signals: `compute`
 
@@ -408,6 +408,7 @@ Full signatures and documentation: [Reference.md](./Reference.md).
 | --- | --- | --- |
 | `sig(v, opts?)` | state | `Sig<T>` |
 | `compute(sig, fn)` / `compute(record, fn)` | derived | `DerivedSig<T>` |
+| `effect(sig \| record, fn)` | side effect | disposer `() => void` |
 | `html\`…\`` | template | `View` |
 | `text(source)` | template | `View` (escaped text node) |
 | `raw(source)` | template | `View` (**unescaped** HTML) |
