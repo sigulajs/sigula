@@ -14,7 +14,7 @@ import {
 } from './core';
 import {text} from './text';
 
-const MARK = `@sig_${Math.random().toFixed(9).slice(2)}`;
+const MARK = `@sig_${(Math.random() * 1e9) | 0}`;
 
 interface Tpl {
   el: HTMLTemplateElement;
