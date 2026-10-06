@@ -30,65 +30,62 @@ export interface Bind<T, C extends CmdContext> {
 // biome-ignore lint/suspicious/noExplicitAny: any bind
 export type AnyBind = Bind<any, any>;
 
-class Queue {
-  private _binds: AnyBind[] = [];
-  private head = 0;
-  private running = false;
-  private scheduled = false;
+// Module singleton, kept as plain state and functions rather than a class
+// instance so the minifier can rename the state and helpers.
+let queue: AnyBind[] = [];
+let head = 0;
+let running = false;
+let scheduled = false;
 
-  addAll(binds: readonly AnyBind[]): this {
-    for (const bind of binds) {
-      if (bind.queued) continue;
-      bind.queued = true;
-      this._binds.push(bind);
-    }
-    if (this._binds.length > this.head) this.kick();
-    return this;
+const enqueue = (binds: readonly AnyBind[]): void => {
+  for (const bind of binds) {
+    if (bind.queued) continue;
+    bind.queued = true;
+    queue.push(bind);
   }
+  if (queue.length > head) kick();
+};
 
-  private kick(): void {
-    if (this.running || this.scheduled) return;
-    this.scheduled = true;
-    queueMicrotask(() => {
-      this.running = true;
-      this.scheduled = false;
-      this.flush();
-    });
-  }
+const kick = (): void => {
+  if (running || scheduled) return;
+  scheduled = true;
+  queueMicrotask(() => {
+    running = true;
+    scheduled = false;
+    flush();
+  });
+};
 
-  private flush(): void {
-    this.running = true;
-    try {
-      while (this.head < this._binds.length) {
-        const bind = this._binds[this.head++] as AnyBind;
-        try {
-          const {removed, sig, context, cmd} = bind;
-          if (!removed) cmd(sig.get(), context);
-        } catch (err) {
-          console.error('[Queue] task failed:', err, bind);
-        } finally {
-          // re-arm after running: cmd reads sig.get() at call time, so a bind
-          // that runs after a write already sees the newest value and must
-          // not re-run, while one that ran before it has to be queued again
-          bind.queued = false;
-        }
-      }
-    } finally {
-      this.running = false;
-      if (this.head < this._binds.length) {
-        // almost impossible in js/ts
-        this._binds = this._binds.slice(this.head);
-        this.head = 0;
-        this.kick();
-      } else {
-        this._binds.length = 0;
-        this.head = 0;
+const flush = (): void => {
+  running = true;
+  try {
+    while (head < queue.length) {
+      const bind = queue[head++] as AnyBind;
+      try {
+        const {removed, sig, context, cmd} = bind;
+        if (!removed) cmd(sig.get(), context);
+      } catch (err) {
+        console.error('[Queue] task failed:', err, bind);
+      } finally {
+        // re-arm after running: cmd reads sig.get() at call time, so a bind
+        // that runs after a write already sees the newest value and must
+        // not re-run, while one that ran before it has to be queued again
+        bind.queued = false;
       }
     }
+  } finally {
+    running = false;
+    if (head < queue.length) {
+      // almost impossible in js/ts
+      queue = queue.slice(head);
+      head = 0;
+      kick();
+    } else {
+      queue.length = 0;
+      head = 0;
+    }
   }
-}
-
-const QUEUE = new Queue();
+};
 
 /**
  * The core reactive value. A `Sig` holds a value and a set of bindings that run
@@ -120,7 +117,7 @@ export class Sig<T> implements Equatable {
 
   /** Enqueues dependents without changing the value; use after in-place mutation. */
   notify() {
-    QUEUE.addAll(this._binds);
+    enqueue(this._binds);
   }
 
   /** Sets the value and always notifies dependents, even when deeply equal. */
