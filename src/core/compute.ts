@@ -180,5 +180,8 @@ export function effect(source: any, fn: (v: any) => void): () => void {
   // Run with the current record before wiring any bind, so a write performed by
   // `fn` cannot re-trigger the effect and a throw cannot leak the derived binds.
   fn(_recordValue(source));
-  return _bind(compute(source, (v) => v), fn);
+  return _bind(
+    compute(source, (v) => v),
+    fn,
+  );
 }
