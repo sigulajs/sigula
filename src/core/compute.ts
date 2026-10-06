@@ -1,5 +1,5 @@
 import type {CmdContext} from './cmd';
-import {createBind, DerivedSig, Sig} from './sig.bind';
+import {createBind, DerivedSig, removeBind, Sig} from './sig.bind';
 
 /**
  * A record whose values are signals, used by the record overload of
@@ -120,4 +120,52 @@ export function compute(source: any, fn: (v: any) => any): DerivedSig<any> {
   return source instanceof Sig
     ? _compute(source, fn)
     : _computeRecord(source, fn);
+}
+
+const _effect = <S>(source: Sig<S>, fn: (v: S) => void): (() => void) => {
+  fn(source.get());
+  const bind = createBind(source, {}, (v: S) => fn(v));
+  return () => removeBind(bind);
+};
+
+/**
+ * Runs a side effect over one signal: `fn` is called immediately with the
+ * current value and again whenever the signal changes.
+ *
+ * @typeParam S - the source value type.
+ * @param source - the signal to observe.
+ * @param fn - the effect, run with the current value.
+ * @returns a disposer that detaches the effect.
+ * @example
+ * ```ts
+ * const dispose = effect(count, (v) => console.log(v));
+ * dispose();
+ * ```
+ * @group Reactivity
+ */
+export function effect<S>(source: Sig<S>, fn: (v: S) => void): () => void;
+/**
+ * Runs a side effect over a record of signals: `fn` is called immediately with
+ * the record of current values and again, once per flush, after any source
+ * changes.
+ *
+ * @typeParam S - the signal record type.
+ * @param source - a record of signals.
+ * @param fn - the effect, run with the record of current values.
+ * @returns a disposer that detaches the effect.
+ * @example
+ * ```ts
+ * const dispose = effect({x, y}, (v) => console.log(v.x + v.y));
+ * ```
+ * @group Reactivity
+ */
+export function effect<S extends SigRecord>(
+  source: S,
+  fn: (v: ValRecord<S>) => void,
+): () => void;
+// biome-ignore lint/suspicious/noExplicitAny: any source
+export function effect(source: any, fn: (v: any) => void): () => void {
+  return source instanceof Sig
+    ? _effect(source, fn)
+    : _effect(compute(source, (v) => v), fn);
 }
