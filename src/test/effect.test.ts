@@ -79,7 +79,7 @@ describe('effect', () => {
     expect(b.getBinds().length).toBe(0);
   });
 
-  it('does not re-trigger when fn writes during the immediate run', () => {
+  it('does not re-trigger when fn writes during the immediate run', async () => {
     const a = sig(1);
     const b = sig(2);
     const seen: number[] = [];
@@ -87,6 +87,7 @@ describe('effect', () => {
       seen.push(v.a);
       if (v.a === 1) a.update(5);
     });
+    await flush();
     expect(seen).toEqual([1]);
   });
 
