@@ -122,8 +122,16 @@ export function compute(source: any, fn: (v: any) => any): DerivedSig<any> {
     : _computeRecord(source, fn);
 }
 
-const _effect = <S>(source: Sig<S>, fn: (v: S) => void): (() => void) => {
-  fn(source.get());
+const _recordValue = <S extends SigRecord>(source: S): ValRecord<S> => {
+  const vals: Record<string, unknown> = {};
+  for (const [k, s] of Object.entries(source)) {
+    if (!k || !s) continue;
+    vals[k] = s.get();
+  }
+  return vals as ValRecord<S>;
+};
+
+const _bind = <S>(source: Sig<S>, fn: (v: S) => void): (() => void) => {
   const bind = createBind(source, {}, (v: S) => fn(v));
   return () => removeBind(bind);
 };
@@ -165,7 +173,12 @@ export function effect<S extends SigRecord>(
 ): () => void;
 // biome-ignore lint/suspicious/noExplicitAny: any source
 export function effect(source: any, fn: (v: any) => void): () => void {
-  return source instanceof Sig
-    ? _effect(source, fn)
-    : _effect(compute(source, (v) => v), fn);
+  if (source instanceof Sig) {
+    fn(source.get());
+    return _bind(source, fn);
+  }
+  // Run with the current record before wiring any bind, so a write performed by
+  // `fn` cannot re-trigger the effect and a throw cannot leak the derived binds.
+  fn(_recordValue(source));
+  return _bind(compute(source, (v) => v), fn);
 }

@@ -1,4 +1,4 @@
-import {beforeEach, describe, expect, it} from 'vitest';
+import {describe, expect, it} from 'vitest';
 import {effect, sig} from '..';
 
 const flush = async () => {
@@ -7,10 +7,6 @@ const flush = async () => {
 };
 
 describe('effect', () => {
-  beforeEach(() => {
-    document.body.innerHTML = '';
-  });
-
   it('runs immediately with the current value', () => {
     const s = sig(1);
     const seen: number[] = [];
@@ -81,5 +77,38 @@ describe('effect', () => {
     await flush();
     expect(a.getBinds().length).toBe(0);
     expect(b.getBinds().length).toBe(0);
+  });
+
+  it('does not re-trigger when fn writes during the immediate run', () => {
+    const a = sig(1);
+    const b = sig(2);
+    const seen: number[] = [];
+    effect({a, b}, (v) => {
+      seen.push(v.a);
+      if (v.a === 1) a.update(5);
+    });
+    expect(seen).toEqual([1]);
+  });
+
+  it('does not leak source binds when the immediate run throws', () => {
+    const a = sig(1);
+    const b = sig(2);
+    expect(() =>
+      effect({a, b}, () => {
+        throw new Error('boom');
+      }),
+    ).toThrow('boom');
+    expect(a.getBinds().length).toBe(0);
+    expect(b.getBinds().length).toBe(0);
+  });
+
+  it('does not leak a bind when the single-signal immediate run throws', () => {
+    const s = sig(1);
+    expect(() =>
+      effect(s, () => {
+        throw new Error('boom');
+      }),
+    ).toThrow('boom');
+    expect(s.getBinds().length).toBe(0);
   });
 });

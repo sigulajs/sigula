@@ -44,30 +44,47 @@ function effect<S extends SigRecord>(
 defines `SigRecord` and `ValRecord`.
 
 ```ts
-const _effect = <S>(source: Sig<S>, fn: (v: S) => void): (() => void) => {
-  fn(source.get());
+const _recordValue = <S extends SigRecord>(source: S): ValRecord<S> => {
+  const vals: Record<string, unknown> = {};
+  for (const [k, s] of Object.entries(source)) {
+    if (!k || !s) continue;
+    vals[k] = s.get();
+  }
+  return vals as ValRecord<S>;
+};
+
+const _bind = <S>(source: Sig<S>, fn: (v: S) => void): (() => void) => {
   const bind = createBind(source, {}, (v: S) => fn(v));
   return () => removeBind(bind);
 };
 ```
 
-Dispatch mirrors `compute`: if the source is a `Sig`, bind to it directly.
-Otherwise derive an identity value from the record and bind to that derived
-signal:
+Dispatch mirrors `compute`: if the source is a `Sig`, run `fn(source.get())`
+and then bind to it directly with `_bind`. Otherwise run `fn` with the current
+record, read via `_recordValue`, and only then create the identity derived
+`compute(source, (v) => v)` and bind to it with `_bind`:
 
 ```ts
 export function effect(source: any, fn: (v: any) => void): () => void {
-  return source instanceof Sig
-    ? _effect(source, fn)
-    : _effect(compute(source, (v) => v), fn);
+  if (source instanceof Sig) {
+    fn(source.get());
+    return _bind(source, fn);
+  }
+  fn(_recordValue(source));
+  return _bind(compute(source, (v) => v), fn);
 }
 ```
 
 ### Immediate run
 
-`fn` is called synchronously with the current value before the bind is created.
-Running it before `createBind` means a write performed by `fn` cannot re-trigger
-the effect. This matches `compute`'s eager first evaluation.
+`fn` is called synchronously with the current value before any bind is created.
+For a single signal this is `fn(source.get())` followed by `_bind`; for a record
+it is `fn(_recordValue(source))` followed by creating the identity derived and
+binding to it. Running the immediate pass before wiring any bind is what
+prevents a self-write from re-triggering the effect — the just-attached binds
+would otherwise queue and fire again — and what prevents a throw from leaking
+binds — the derived's source binds are only created after `fn` returns, so a
+throw leaves nothing attached. This matches `compute`'s eager first evaluation.
 
 ### Coalescing
 
