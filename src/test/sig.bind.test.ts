@@ -503,3 +503,42 @@ describe('compute record coalescing', () => {
     expect(sum.get()).toBe(21);
   });
 });
+
+describe('queue self-write termination', () => {
+  it('does not re-run a bind that writes its own signal from its command', async () => {
+    const s = sig(0);
+    let runs = 0;
+    createBind(s, {}, () => {
+      runs++;
+      s.trans((v) => v + 1);
+    });
+
+    s.update(10);
+    await flush();
+
+    // the running bind stays `queued` until its command returns, so its own
+    // synchronous write cannot re-queue it
+    expect(runs).toBe(1);
+    expect(s.get()).toBe(11);
+  });
+
+  it('does not infinitely re-render a view whose callback writes its signal', async () => {
+    const s = sig(0);
+    let runs = 0;
+    render(
+      view(s, () => {
+        runs++;
+        s.trans((v) => v + 1);
+        return text(s);
+      }),
+      document.body,
+    );
+    expect(runs).toBe(1);
+
+    s.update(10);
+    await flush();
+
+    expect(runs).toBe(2);
+    expect(s.get()).toBe(11);
+  });
+});
