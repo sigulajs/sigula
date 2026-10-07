@@ -1,6 +1,6 @@
 # `ref`: capture the current element in a signal
 
-Date: 2026-10-05
+Date: 2026-10-07
 
 ## Motivation
 
