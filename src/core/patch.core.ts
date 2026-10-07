@@ -26,6 +26,8 @@ export interface PatchContext extends CmdContext {
   node: Node;
   /** Extra arguments for the command, such as the attribute or style key. */
   extra?: unknown[];
+  // Internal: a teardown hook a command can register for `patch.cleanBinds`.
+  cleanup?: () => void;
 }
 
 /**

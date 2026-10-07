@@ -282,6 +282,33 @@ const actCmd = <T>(val: T, ctx: PatchContext) => {
 export const act = <T>(source: T | Sig<T>, fn: ActFn<T>): ToPatchItem<T> =>
   toPatchItem(source, [fn], actCmd);
 
+const refCmd = (_val: null, ctx: PatchContext) => {
+  const target = ctx.extra?.[0] as Sig<Element | null> | undefined;
+  if (!target) return;
+  target.update(ctx.node as Element);
+  ctx.cleanup = () => target.update(null);
+};
+
+/**
+ * Captures the patched element into `target` on mount, and resets `target` to
+ * `null` when the patch is torn down. Must be interpolated in an attribute
+ * position.
+ *
+ * @typeParam T - the element type.
+ * @param target - a signal that receives the element, or `null`.
+ * @returns a deferred patch item.
+ * @example
+ * ```ts
+ * const input = sig<HTMLInputElement | null>(null);
+ * html`<input ${patch(ref(input))} />`;
+ * input.get(); // the element, or null
+ * ```
+ * @group DOM bindings
+ */
+export const ref = <T extends Element>(
+  target: Sig<T | null>,
+): ToPatchItem<null> => toPatchItem(null, [target], refCmd);
+
 type _Listener<K extends keyof HTMLElementEventMap> = (
   this: HTMLElement,
   ev: HTMLElementEventMap[K],

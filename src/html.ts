@@ -92,6 +92,7 @@ const commitView = <T, C extends CmdContext>(view: View<T, C>, node: Node) => {
 
 const commitPatch = (patch: Patch, node: Node) => {
   const binds: Bind<unknown, PatchContext>[] = [];
+  const cleanups: (() => void)[] = [];
   patch.toPatchItems.forEach((toPatchItem) => {
     const item = toPatchItem(node as Element);
     if (item.source instanceof Sig) {
@@ -100,10 +101,12 @@ const commitPatch = (patch: Patch, node: Node) => {
     } else {
       item.cmd(item.source, item.context);
     }
+    if (item.context.cleanup) cleanups.push(item.context.cleanup);
   });
 
   patch.cleanBinds = () => {
     binds.forEach(removeBind);
+    cleanups.forEach((cleanup) => cleanup());
   };
 };
 

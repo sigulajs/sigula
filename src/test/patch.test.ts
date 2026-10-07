@@ -6,15 +6,18 @@ import {
   id,
   on,
   patch,
+  ref,
   render,
   type Sig,
   sig,
   style,
   styleProp,
+  text,
   toPatchItem,
   toggleClass,
   toggleClasses,
   val,
+  view,
 } from '..';
 
 // binds are dispatched from a microtask queue
@@ -334,5 +337,30 @@ describe('patch', () => {
   it('props: props are applied before items', () => {
     render(html`<div ${patch({id: 'a'}, id('b'))}></div>`, document.body);
     expect(document.querySelector('div')?.id).toBe('b');
+  });
+
+  it('ref captures the element and clears on dispose', () => {
+    const el = sig<Element | null>(null);
+    const dispose = render(html`<div ${patch(ref(el))}></div>`, document.body);
+    expect(el.get()).toBe(document.querySelector('div'));
+
+    dispose();
+    expect(el.get()).toBeNull();
+  });
+
+  it('ref works with a typed element', () => {
+    const input = sig<HTMLInputElement | null>(null);
+    render(html`<input ${patch(ref(input))} />`, document.body);
+    expect(input.get()?.tagName).toBe('INPUT');
+  });
+
+  it('ref drives a view', async () => {
+    const el = sig<Element | null>(null);
+    render(
+      html`<div>${view(el, (v) => text(v ? v.tagName : 'none'))}<span ${patch(ref(el))}></span></div>`,
+      document.body,
+    );
+    await flush();
+    expect(document.body.innerHTML).toBe('<div>SPAN<span></span></div>');
   });
 });
