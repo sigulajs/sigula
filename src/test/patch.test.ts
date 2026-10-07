@@ -363,4 +363,14 @@ describe('patch', () => {
     await flush();
     expect(document.body.innerHTML).toBe('<div>SPAN<span></span></div>');
   });
+
+  it('ref teardown is idempotent and cannot clobber a later element', () => {
+    const el = sig<Element | null>(null);
+    const first = render(html`<div ${patch(ref(el))}></div>`, document.body);
+    first();
+
+    render(html`<span ${patch(ref(el))}></span>`, document.body);
+    first(); // stale disposer must be a no-op
+    expect(el.get()).toBe(document.querySelector('span'));
+  });
 });
