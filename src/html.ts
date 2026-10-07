@@ -106,7 +106,9 @@ const commitPatch = (patch: Patch, node: Node) => {
 
   patch.cleanBinds = () => {
     binds.forEach(removeBind);
-    cleanups.forEach((cleanup) => cleanup());
+    cleanups.forEach((cleanup) => {
+      cleanup();
+    });
   };
 };
 

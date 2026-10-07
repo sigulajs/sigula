@@ -13,9 +13,9 @@ import {
   style,
   styleProp,
   text,
-  toPatchItem,
   toggleClass,
   toggleClasses,
+  toPatchItem,
   val,
   view,
 } from '..';
