@@ -482,4 +482,24 @@ describe('compute record coalescing', () => {
     await flush();
     expect(sum.get()).toBe(30);
   });
+
+  it('coalesces when a non-first source is the queued representative', async () => {
+    const a = sig(1);
+    const b = sig(2);
+    let calls = 0;
+    const sum = compute({a, b}, (v) => {
+      calls++;
+      return v.a + v.b;
+    });
+    const consumer = createBind(sum, {}, () => {});
+
+    calls = 0;
+    b.update(20); // queues the second from-bind, not the first
+    removeBind(consumer);
+    createBind(sum, {}, () => {});
+    await flush();
+
+    expect(calls).toBe(1);
+    expect(sum.get()).toBe(21);
+  });
 });

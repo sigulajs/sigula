@@ -38,12 +38,11 @@ from-binds: `cleanup` marks them `removed`, and re-arm resets `removed` and
 re-adds the same bind objects. A queued representative therefore stays live, so
 the flag cannot go stale and suppress a fresh bind: the formerly-queued bind is
 still the one that runs on flush. The synchronous recompute on re-arm is kept,
-and only skipped when the first from-bind is already queued (the pending run will
-see the current values).
+and only skipped when a bind of the group is already queued (that pending run
+will see the current values).
 
-Placing the group on the context — rather than adding `Bind.group` — means
-`DerivedSig`'s re-arm needs no change: it reuses binds that carry `f.context`,
-which is the same shared object, so the group survives a hide/re-show.
+The group lives on the context rather than on `Bind`, so re-arm only has to keep
+the same from-bind objects — it never reconstructs or copies the group.
 
 ### Queue
 

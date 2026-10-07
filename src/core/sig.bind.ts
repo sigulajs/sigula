@@ -212,10 +212,12 @@ export class DerivedSig<T> extends Sig<T> {
       f.sig.addBind(f);
     }
     // every from-bind shares one context whose cmd reads all sources, so one
-    // invocation recomputes the whole derived value. Skip it when this bind is
-    // already queued: the pending run will see the current values.
+    // invocation recomputes the whole derived value. Skip it when any bind of
+    // the group is already queued: the pending run will see the current values.
     const first = this._fromBinds[0];
-    if (first && !first.queued) first.cmd(first.sig.get(), first.context);
+    if (first && !first.queued && !groupOf(first.context)?.queued) {
+      first.cmd(first.sig.get(), first.context);
+    }
   }
 
   /** Removes every source binding when the derived signal has no consumers. */
