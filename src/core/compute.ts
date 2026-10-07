@@ -1,6 +1,5 @@
 import type {CmdContext} from './cmd';
 import {
-  type AnyBind,
   createBind,
   DerivedSig,
   removeBind,
@@ -41,7 +40,7 @@ interface ComputeRecordContext<S extends SigRecord, T> extends CmdContext {
   target: Sig<T>;
   fn: (v: ValRecord<S>) => T;
   entries: ComputeEntry[];
-  group: {queued: boolean; bind?: AnyBind};
+  group: {queued: boolean};
 }
 
 const computeCmd = <S, T>(s: S, ctx: ComputeContext<S, T>) => {

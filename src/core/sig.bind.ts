@@ -37,17 +37,16 @@ let head = 0;
 let running = false;
 let scheduled = false;
 
-const groupOf = (ctx: object): {queued: boolean; bind?: AnyBind} | undefined =>
-  (ctx as {group?: {queued: boolean; bind?: AnyBind}}).group;
+const groupOf = (ctx: object): {queued: boolean} | undefined =>
+  (ctx as {group?: {queued: boolean}}).group;
 
 const enqueue = (binds: readonly AnyBind[]): void => {
   for (const bind of binds) {
     if (bind.queued) continue;
     const group = groupOf(bind.context);
     if (group) {
-      if (group.queued && group.bind && !group.bind.removed) continue;
+      if (group.queued) continue;
       group.queued = true;
-      group.bind = bind;
     }
     bind.queued = true;
     queue.push(bind);
@@ -71,10 +70,7 @@ const flush = (): void => {
     while (head < queue.length) {
       const bind = queue[head++] as AnyBind;
       const group = groupOf(bind.context);
-      if (group && group.bind === bind) {
-        group.queued = false;
-        delete group.bind;
-      }
+      if (group) group.queued = false;
       try {
         const {removed, sig, context, cmd} = bind;
         if (!removed) cmd(sig.get(), context);
@@ -196,10 +192,9 @@ export class DerivedSig<T> extends Sig<T> {
 
   /** Registers a consumer; re-links to sources and recomputes once if detached. */
   // A derived signal's upstream links are torn down when its last observer
-  // goes away, which happens any time a view() subtree is hidden. The links
-  // cannot be revived in place because removeBind marks them removed, so we
-  // rebuild fresh binds from each recipe and recompute once: sources usually
-  // moved while we were detached.
+  // goes away, which happens any time a view() subtree is hidden. The existing
+  // from-binds are reused (reset `removed`, re-added) and recomputed once:
+  // sources usually moved while we were detached.
   //
   // super.addBind must stay first: the recompute below updates this signal
   // straight away, so the returning observer has to be registered before it
@@ -208,14 +203,19 @@ export class DerivedSig<T> extends Sig<T> {
     super.addBind(bind);
     if (this._linked) return;
     this._linked = true;
+    // Reuse the existing from-binds instead of recreating them: the same bind
+    // objects stay in the queue, so a shared group flag always refers to a live
+    // bind. `cleanup` only removed them, so re-adding is enough.
     for (let i = 0; i < this._fromBinds.length; i++) {
       const f = this._fromBinds[i] as AnyBind;
-      this._fromBinds[i] = createBind(f.sig, f.context, f.cmd);
+      f.removed = false;
+      f.sig.addBind(f);
     }
     // every from-bind shares one context whose cmd reads all sources, so one
-    // invocation recomputes the whole derived value
+    // invocation recomputes the whole derived value. Skip it when this bind is
+    // already queued: the pending run will see the current values.
     const first = this._fromBinds[0];
-    if (first) first.cmd(first.sig.get(), first.context);
+    if (first && !first.queued) first.cmd(first.sig.get(), first.context);
   }
 
   /** Removes every source binding when the derived signal has no consumers. */

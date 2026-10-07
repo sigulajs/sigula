@@ -25,7 +25,7 @@ interface ComputeRecordContext<S extends SigRecord, T> extends CmdContext {
   target: Sig<T>;
   fn: (v: ValRecord<S>) => T;
   entries: ComputeEntry[];
-  group: {queued: boolean; bind?: AnyBind};
+  group: {queued: boolean};
 }
 ```
 
@@ -33,16 +33,17 @@ interface ComputeRecordContext<S extends SigRecord, T> extends CmdContext {
 every source bind of that record shares it. `ComputeRecordContext` is internal
 (not exported), so there is no public type change.
 
-The group also tracks the bind that currently represents it via `bind`. This is
-what makes re-arm safe: `DerivedSig.cleanup()` marks its from-binds `removed`
-while they may still sit in the queue, and re-arm builds fresh binds that share
-the same context (and therefore the same group). Without tracking the
-representative bind, the stale `queued` left by a removed bind would suppress a
-fresh re-armed bind and drop a required recompute.
+The plain flag is safe across re-arm because `DerivedSig` reuses its existing
+from-binds: `cleanup` marks them `removed`, and re-arm resets `removed` and
+re-adds the same bind objects. A queued representative therefore stays live, so
+the flag cannot go stale and suppress a fresh bind: the formerly-queued bind is
+still the one that runs on flush. The synchronous recompute on re-arm is kept,
+and only skipped when the first from-bind is already queued (the pending run will
+see the current values).
 
 Placing the group on the context — rather than adding `Bind.group` — means
-`DerivedSig`'s re-arm needs no change: it rebuilds binds from `f.context`, which
-is the same shared object, so the group survives a hide/re-show.
+`DerivedSig`'s re-arm needs no change: it reuses binds that carry `f.context`,
+which is the same shared object, so the group survives a hide/re-show.
 
 ### Queue
 
@@ -52,23 +53,20 @@ and `enqueue`/`flush` consult it:
 ```ts
 const groupOf = (
   ctx: object,
-): {queued: boolean; bind?: AnyBind} | undefined =>
-  (ctx as {group?: {queued: boolean; bind?: AnyBind}}).group;
+): {queued: boolean} | undefined =>
+  (ctx as {group?: {queued: boolean}}).group;
 ```
 
 `enqueue`: a bind whose group is already scheduled is skipped, so only the first
-bind of a group is pushed in a given flush. The group only suppresses a bind when
-it still has a live representative (`group.bind` exists and is not `removed`);
-otherwise the new bind claims the group:
+bind of a group is pushed in a given flush:
 
 ```ts
 for (const bind of binds) {
   if (bind.queued) continue;
   const group = groupOf(bind.context);
   if (group) {
-    if (group.queued && group.bind && !group.bind.removed) continue;
+    if (group.queued) continue;
     group.queued = true;
-    group.bind = bind;
   }
   bind.queued = true;
   queue.push(bind);
@@ -77,18 +75,13 @@ if (queue.length > head) kick();
 ```
 
 `flush`: the group is cleared **before** the command runs, and `bind.queued` is
-cleared after it, as today. The group is only cleared when the dequeued bind is
-its current representative, so a superseded or removed bind cannot clear the flag
-out from under the live bind:
+cleared after it, as today:
 
 ```ts
 while (head < queue.length) {
   const bind = queue[head++] as AnyBind;
   const group = groupOf(bind.context);
-  if (group && group.bind === bind) {
-    group.queued = false;
-    delete group.bind;
-  }
+  if (group) group.queued = false;
   try {
     const {removed, sig, context, cmd} = bind;
     if (!removed) cmd(sig.get(), context);
