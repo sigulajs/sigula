@@ -542,3 +542,26 @@ describe('queue self-write termination', () => {
     expect(s.get()).toBe(11);
   });
 });
+
+describe('queue flush cap', () => {
+  it('stops a divergent flush at the task cap', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const s = sig(0);
+    let runs = 0;
+    const bump = () => {
+      runs++;
+      s.forceUpdate(runs);
+    };
+    // Two binds on one signal, each writing that signal: every task re-queues
+    // the other, so the queue grows without bound.
+    createBind(s, {}, bump);
+    createBind(s, {}, bump);
+
+    s.forceUpdate(1);
+    await flush();
+
+    expect(runs).toBe(1_000_000);
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining('flush exceeded'));
+    spy.mockRestore();
+  });
+});

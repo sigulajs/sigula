@@ -37,10 +37,14 @@ export type AnyBind = Bind<any, any>;
 
 // Module singleton, kept as plain state and functions rather than a class
 // instance so the minifier can rename the state and helpers.
-let queue: AnyBind[] = [];
+const queue: AnyBind[] = [];
 let head = 0;
 let running = false;
 let scheduled = false;
+
+// Upper bound on the tasks one flush may run, so a divergent update loop cannot
+// hang the microtask. Above the 150k-bind stress test, with wide headroom.
+const MAX_FLUSH = 1_000_000;
 
 const enqueue = (binds: readonly AnyBind[]): void => {
   for (const bind of binds) {
@@ -68,8 +72,10 @@ const kick = (): void => {
 
 const flush = (): void => {
   running = true;
+  let tasks = 0;
   try {
     while (head < queue.length) {
+      if (++tasks > MAX_FLUSH) break;
       const bind = queue[head++] as AnyBind;
       const group = bind.group;
       if (group) group.queued = false;
@@ -88,14 +94,17 @@ const flush = (): void => {
   } finally {
     running = false;
     if (head < queue.length) {
-      // almost impossible in js/ts
-      queue = queue.slice(head);
-      head = 0;
-      kick();
-    } else {
-      queue.length = 0;
-      head = 0;
+      // Cap hit: release the tasks we did not run so a later write can
+      // re-enqueue them, then report once.
+      for (let i = head; i < queue.length; i++) {
+        const b = queue[i] as AnyBind;
+        b.queued = false;
+        if (b.group) b.group.queued = false;
+      }
+      console.error(`[Queue] flush exceeded ${MAX_FLUSH} tasks`);
     }
+    queue.length = 0;
+    head = 0;
   }
 };
 
