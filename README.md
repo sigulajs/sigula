@@ -5,7 +5,7 @@
 A minimal, signal-based web framework with fine-grained reactivity. No virtual DOM — just direct, minimal updates to the real DOM.
 
 ```ts
-import {html, on, patch, render, sig, text} from 'sigula';
+import {html, on, patch, render, sig} from 'sigula';
 
 const count = sig(0);
 
@@ -146,7 +146,7 @@ const dispose = render(Todos(), app);
 dispose(); // detaches every binding and removes the nodes
 ```
 
-Runnable versions live in [`examples/`](./examples) (`equation`, `filtertodos`).
+Runnable versions live in [`examples/`](./examples) (`quickstart`, `equation`, `filtertodos`).
 
 ## 🧠 Core Concepts
 
@@ -206,7 +206,7 @@ items.notify();          // ← tell dependents to re-run
 
 ### Bindings: the unit of reactivity
 
-A binding is a three-field record — that is the entire reactive primitive:
+A binding is a small record — that is the entire reactive primitive:
 
 ```ts
 interface Bind<T, C> {
@@ -215,6 +215,7 @@ interface Bind<T, C> {
   cmd: (val: T, ctx: C) => void;  // what to do with the new value
   removed: boolean;
   queued?: boolean;
+  group?: {queued: boolean};      // shared by one compute record's source binds
 }
 ```
 
@@ -322,8 +323,9 @@ The props object handles `id`, `val`, `class`, `style`, `styleProp`, `on`; any o
 | `toggleClasses(tokens, source)` | Toggles several classes from one value. |
 | `on(type, listener, options?)` | `addEventListener`. |
 | `act(source, fn)` | Escape hatch: run arbitrary code with `(element, value)`. |
+| `ref(target)` | Capture the element into a `Sig<Element \| null>` on mount; reset to `null` on teardown. |
 
-Every command takes a plain value (applied once at mount) **or** a `Sig` (applied at mount and re-applied on change):
+Value-bearing commands (`id`, `val`, `attr`, `style`, `styleProp`, `toggleClass`, `toggleClasses`) take a plain value (applied once at mount) **or** a `Sig` (applied at mount and re-applied on change):
 
 ```ts
 const disabled = sig(false);
@@ -386,8 +388,9 @@ sig.update(1); sig.update(2); sig.update(3);  // each dependent binding runs ONC
 ```
 
 - **Batched** across signals — many writes, one flush.
-- **Coalesced per binding** — a `queued` flag keeps a bind from entering the queue twice; since `cmd` reads `sig.get()` at call time, it always sees the newest value.
-- **Error-isolated** — a throwing bind is logged (`console.error('[Queue] task failed:', …)`) and the rest of the queue still runs.
+- **Coalesced per binding** — a `queued` flag keeps a bind from entering the queue twice; since `cmd` reads `sig.get()` at call time, it always sees the newest value. A shared `group` additionally coalesces the source binds of one `compute` record.
+- **Error-isolated** — a throwing bind is logged (`console.error('task failed', …)`) and the rest of the queue still runs.
+- **Bounded** — a flush that exceeds the task cap stops, logs (`console.error('flush cap')`), releases what it did not run, and does not re-kick, so a divergent update loop cannot hang the microtask.
 
 ### What Sigula deliberately does not have
 
