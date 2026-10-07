@@ -413,7 +413,7 @@ Full signatures and documentation: [Reference.md](./Reference.md).
 | `text(source)` | template | `View` (escaped text node) |
 | `raw(source)` | template | `View` (**unescaped** HTML) |
 | `patch(props \| …items)` | binding | `Patch` |
-| `id`, `val`, `attr`, `style`, `styleProp`, `toggleClass`, `toggleClasses`, `on`, `act` | patch commands | `ToPatchItem<T>` |
+| `id`, `val`, `attr`, `style`, `styleProp`, `toggleClass`, `toggleClasses`, `on`, `act`, `ref` | patch commands | `ToPatchItem<T>` |
 | `view(sig, viewFn)` | control flow | `View` |
 | `repeat(sig, {key, view, eq?})` | control flow | `View` |
 | `list(items, viewFn)` | control flow | `View` (static) |

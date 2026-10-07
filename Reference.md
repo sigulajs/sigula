@@ -411,6 +411,34 @@ change. The escape hatch for anything the built-in commands do not cover.
 html`<canvas ${patch(act(frame, (node, v) => draw(node, v)))}></canvas>`;
 ```
 
+### `ref`
+
+```ts
+const ref: <T extends Element>(target: Sig<T | null>) => ToPatchItem<null>;
+```
+
+Captures the patched element into `target` on mount, and resets `target` to
+`null` when the patch is torn down. Must be interpolated in an attribute
+position.
+
+**Type parameters**
+
+- `T` — the element type.
+
+**Parameters**
+
+- `target` — a signal that receives the element, or `null`.
+
+**Returns** a deferred patch item.
+
+**Example**
+
+```ts
+const input = sig<HTMLInputElement | null>(null);
+html`<input ${patch(ref(input))} />`;
+input.get(); // the element, or null
+```
+
 ### `view`
 
 ```ts

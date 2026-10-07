@@ -25,6 +25,7 @@ const ORDER = [
   'toggleClasses',
   'on',
   'act',
+  'ref',
   'view',
   'repeat',
   'list',
