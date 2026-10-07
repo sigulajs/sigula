@@ -18,51 +18,38 @@ already runs once per flush.
 
 ### Storage
 
-The group lives on the **shared context**, not on the `Bind`:
+The group lives on the **`Bind`**, shared by the source binds of one record:
 
 ```ts
-interface ComputeRecordContext<S extends SigRecord, T> extends CmdContext {
-  target: Sig<T>;
-  fn: (v: ValRecord<S>) => T;
-  entries: ComputeEntry[];
-  group: {queued: boolean};
+interface Bind<T, C extends CmdContext> {
+  // ...
+  queued?: boolean;
+  group?: {queued: boolean};
 }
 ```
 
-`_computeRecord` creates one `group: {queued: false}` in the context literal, so
-every source bind of that record shares it. `ComputeRecordContext` is internal
-(not exported), so there is no public type change.
+`_computeRecord` creates one `group: {queued: false}` and assigns it to every
+source bind it creates, so they share it. This is safe now that `DerivedSig`
+reuses its existing from-binds on re-arm: `cleanup` marks them `removed`, and
+re-arm resets `removed` and re-adds the same bind objects, so a bind's `group`
+survives. (Before reuse, re-arm created fresh binds and a `Bind.group` would have
+been lost; that is why the group was first placed on the context.)
 
-The plain flag is safe across re-arm because `DerivedSig` reuses its existing
-from-binds: `cleanup` marks them `removed`, and re-arm resets `removed` and
-re-adds the same bind objects. A queued representative therefore stays live, so
-the flag cannot go stale and suppress a fresh bind: the formerly-queued bind is
-still the one that runs on flush. The synchronous recompute on re-arm is kept,
-and only skipped when a bind of the group is already queued (that pending run
-will see the current values).
-
-The group lives on the context rather than on `Bind`, so re-arm only has to keep
-the same from-bind objects — it never reconstructs or copies the group.
+The group flag cannot go stale and suppress a fresh bind: the formerly-queued bind
+is the one that runs on flush. The synchronous recompute on re-arm is kept, and
+only skipped when a bind of the group is already queued (that pending run will
+see the current values).
 
 ### Queue
 
-In `src/core/sig.bind.ts`, a small helper reads the group from a bind's context,
-and `enqueue`/`flush` consult it:
-
-```ts
-const groupOf = (
-  ctx: object,
-): {queued: boolean} | undefined =>
-  (ctx as {group?: {queued: boolean}}).group;
-```
-
-`enqueue`: a bind whose group is already scheduled is skipped, so only the first
-bind of a group is pushed in a given flush:
+In `src/core/sig.bind.ts`, `enqueue`/`flush` read the group straight off the
+bind. `enqueue`: a bind whose group is already scheduled is skipped, so only the
+first bind of a group is pushed in a given flush:
 
 ```ts
 for (const bind of binds) {
   if (bind.queued) continue;
-  const group = groupOf(bind.context);
+  const group = bind.group;
   if (group) {
     if (group.queued) continue;
     group.queued = true;
@@ -79,7 +66,7 @@ cleared after it, as today:
 ```ts
 while (head < queue.length) {
   const bind = queue[head++] as AnyBind;
-  const group = groupOf(bind.context);
+  const group = bind.group;
   if (group) group.queued = false;
   try {
     const {removed, sig, context, cmd} = bind;
@@ -100,9 +87,10 @@ sources, so the two are equivalent today; clearing first is the safe choice.
 
 ### What does not change
 
-`Bind`, `createBind`, `removeBind`, `DerivedSig` (including re-arm), the
-`ComputeContext` for single-source `compute`, `effect`, and the error/removed
-handling. No exported symbol changes; no error codes.
+`createBind`, `removeBind`, `DerivedSig` (including re-arm), the `ComputeContext`
+for single-source `compute`, `effect`, and the error/removed handling. `Bind`
+gains one optional, additive `group` member (documented in `Reference.md`); no
+new exported symbols and no error codes.
 
 ## Testing
 
@@ -128,4 +116,5 @@ Add to `src/test/sig.bind.test.ts` (or the compute coverage):
    `fn` once, with the final values.
 2. Coalescing still holds after a `DerivedSig` hide/re-show (re-arm).
 3. Single-signal `compute` and all other reactive behaviour are unchanged.
-4. No public API changes; `pnpm test` / `pnpm typecheck` pass.
+4. No new exported symbols (only an optional `Bind.group` member is added);
+   `pnpm test` / `pnpm typecheck` pass.

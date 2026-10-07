@@ -800,6 +800,7 @@ runs when the signal changes.
 - `cmd` — The command run with the current value and context.
 - `removed` — Set when the binding is detached; a removed binding is skipped.
 - `queued` — Queue flag; true while the binding is queued for the next flush.
+- `group` — Group flag. Binds that share a group (the source binds of one `compute` record) are enqueued at most once per flush.
 
 ### `AnyBind`
 

@@ -20,6 +20,11 @@ export interface Bind<T, C extends CmdContext> {
   removed: boolean;
   /** Queue flag; true while the binding is queued for the next flush. */
   queued?: boolean;
+  /**
+   * Group flag. Binds that share a group (the source binds of one `compute`
+   * record) are enqueued at most once per flush.
+   */
+  group?: {queued: boolean};
 }
 
 /**
@@ -37,13 +42,10 @@ let head = 0;
 let running = false;
 let scheduled = false;
 
-const groupOf = (ctx: object): {queued: boolean} | undefined =>
-  (ctx as {group?: {queued: boolean}}).group;
-
 const enqueue = (binds: readonly AnyBind[]): void => {
   for (const bind of binds) {
     if (bind.queued) continue;
-    const group = groupOf(bind.context);
+    const group = bind.group;
     if (group) {
       if (group.queued) continue;
       group.queued = true;
@@ -69,7 +71,7 @@ const flush = (): void => {
   try {
     while (head < queue.length) {
       const bind = queue[head++] as AnyBind;
-      const group = groupOf(bind.context);
+      const group = bind.group;
       if (group) group.queued = false;
       try {
         const {removed, sig, context, cmd} = bind;
@@ -215,7 +217,7 @@ export class DerivedSig<T> extends Sig<T> {
     // invocation recomputes the whole derived value. Skip it when any bind of
     // the group is already queued: the pending run will see the current values.
     const first = this._fromBinds[0];
-    if (first && !first.queued && !groupOf(first.context)?.queued) {
+    if (first && !first.queued && !first.group?.queued) {
       first.cmd(first.sig.get(), first.context);
     }
   }

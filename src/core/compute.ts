@@ -1,10 +1,5 @@
 import type {CmdContext} from './cmd';
-import {
-  createBind,
-  DerivedSig,
-  removeBind,
-  Sig,
-} from './sig.bind';
+import {createBind, DerivedSig, removeBind, Sig} from './sig.bind';
 
 /**
  * A record whose values are signals, used by the record overload of
@@ -40,7 +35,6 @@ interface ComputeRecordContext<S extends SigRecord, T> extends CmdContext {
   target: Sig<T>;
   fn: (v: ValRecord<S>) => T;
   entries: ComputeEntry[];
-  group: {queued: boolean};
 }
 
 const computeCmd = <S, T>(s: S, ctx: ComputeContext<S, T>) => {
@@ -76,15 +70,13 @@ const _computeRecord = <S extends SigRecord, T>(
   }
 
   const target = new DerivedSig(fn(vals as ValRecord<S>));
-  const ctx: ComputeRecordContext<S, T> = {
-    target,
-    fn,
-    entries,
-    group: {queued: false},
-  };
+  const ctx: ComputeRecordContext<S, T> = {target, fn, entries};
+  const group: {queued: boolean} = {queued: false};
 
   for (const entry of entries) {
-    target.addFromBind(createBind(entry[1], ctx, computeRecordCmd));
+    const bind = createBind(entry[1], ctx, computeRecordCmd);
+    bind.group = group;
+    target.addFromBind(bind);
   }
 
   return target;
