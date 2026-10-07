@@ -619,10 +619,11 @@ Detaches a binding and marks it removed so queued runs are skipped.
 const eq: <T>(a: T, b: T) => boolean;
 ```
 
-Deep structural equality. Compares primitives, arrays, `Date`, `RegExp`,
-`Map`, `Set`, and plain objects, and defers to `a.equals(b)` when `a`
-implements `Equatable`. This is the default comparator for `Sig.update` and
-`repeat`. Values with different prototypes are never equal.
+Deep structural equality for primitives, arrays, and plain objects, deferring
+to `a.equals(b)` when `a` implements `Equatable`. Any other object — `Date`,
+`RegExp`, `Map`, `Set`, class instances, null-prototype objects — is equal
+only by reference. This is the default comparator for `Sig.update` and
+`repeat`.
 
 **Type parameters**
 

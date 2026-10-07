@@ -84,7 +84,7 @@ const flush = (): void => {
         const {removed, sig, context, cmd} = bind;
         if (!removed) cmd(sig.get(), context);
       } catch (err) {
-        console.error('[Queue] task failed:', err, bind);
+        console.error('task failed', err);
       } finally {
         // re-arm after running: cmd reads sig.get() at call time, so a bind
         // that runs after a write already sees the newest value and must
@@ -102,7 +102,7 @@ const flush = (): void => {
         b.queued = false;
         if (b.group) b.group.queued = false;
       }
-      console.error(`[Queue] flush exceeded ${MAX_FLUSH} tasks`);
+      console.error('flush cap');
     }
     queue.length = 0;
     head = 0;

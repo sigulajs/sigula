@@ -30,10 +30,11 @@ const isEquatable = (value: unknown): value is Equatable =>
 export type UnknownRecord = Record<string, unknown>;
 
 /**
- * Deep structural equality. Compares primitives, arrays, `Date`, `RegExp`,
- * `Map`, `Set`, and plain objects, and defers to `a.equals(b)` when `a`
- * implements `Equatable`. This is the default comparator for `Sig.update` and
- * `repeat`. Values with different prototypes are never equal.
+ * Deep structural equality for primitives, arrays, and plain objects, deferring
+ * to `a.equals(b)` when `a` implements `Equatable`. Any other object — `Date`,
+ * `RegExp`, `Map`, `Set`, class instances, null-prototype objects — is equal
+ * only by reference. This is the default comparator for `Sig.update` and
+ * `repeat`.
  *
  * @typeParam T - the value type.
  * @param a - the first value.
@@ -49,8 +50,6 @@ export const eq = <T>(a: T, b: T): boolean => {
 
   if (isEquatable(a)) return a.equals(b);
 
-  // may let Array always return false
-  // if (Array.isArray(a) || Array.isArray(b)) return false;
   if (Array.isArray(a) && Array.isArray(b)) {
     if (a.length !== b.length) return false;
     for (let i = 0; i < a.length; i++) {
@@ -59,44 +58,14 @@ export const eq = <T>(a: T, b: T): boolean => {
     return true;
   }
 
-  // Date
-  if (a instanceof Date && b instanceof Date)
-    return a.getTime() === b.getTime();
-
-  // RegExp
-  if (a instanceof RegExp && b instanceof RegExp) {
-    return a.toString() === b.toString();
+  // Only plain objects are compared structurally. Everything else (Date, RegExp,
+  // Map, Set, class instances, null-prototype objects) is equal only by
+  // reference, which the `a === b` check above already handled.
+  const proto = Object.getPrototypeOf(a);
+  if (proto !== Object.getPrototypeOf(b) || proto !== Object.prototype) {
+    return false;
   }
 
-  // Map
-  if (a instanceof Map && b instanceof Map) {
-    if (a.size !== b.size) return false;
-    for (const [key, val] of a) {
-      if (!b.has(key) || !eq(val, b.get(key))) return false;
-    }
-    return true;
-  }
-
-  // Set
-  if (a instanceof Set && b instanceof Set) {
-    if (a.size !== b.size) return false;
-    const arrA = Array.from(a);
-    const arrB = Array.from(b);
-    return eq(arrA, arrB);
-  }
-
-  // Object & Record
-  // Reject different prototypes before falling back to a key comparison.
-  // Object.keys is [] for Date, Map, Set, RegExp, Error and [], so without
-  // this guard isEqual([], {}) and isEqual(new Date(0), {}) both report
-  // equal and Sig.update silently swallows a shape-changing write.
-  // Must stay BELOW the isEquatable check above: hoisting it stops a user
-  // Equatable from ever being consulted.
-  if (Object.getPrototypeOf(a) !== Object.getPrototypeOf(b)) return false;
-
-  // both are objects sharing one prototype from here on, and the length check
-  // plus Object.hasOwn below prove the two key sets are identical, so ao[key]
-  // is always an own property
   const ao = a as UnknownRecord;
   const bo = b as UnknownRecord;
 

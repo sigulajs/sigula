@@ -185,12 +185,7 @@ describe('queue coalescing', () => {
     await flush();
 
     expect(ran).toBe(1);
-    expect(spy).toHaveBeenCalledWith(
-      '[Queue] task failed:',
-      expect.any(Error),
-      expect.anything(),
-    );
-    spy.mockRestore();
+    expect(spy).toHaveBeenCalledWith('task failed', expect.any(Error));
   });
 });
 
@@ -561,7 +556,7 @@ describe('queue flush cap', () => {
     await flush();
 
     expect(runs).toBe(1_000_000);
-    expect(spy).toHaveBeenCalledWith(expect.stringContaining('flush exceeded'));
+    expect(spy).toHaveBeenCalledWith('flush cap');
     // the unrun tail is released, so the binds are not left stuck queued
     expect(a.queued).toBe(false);
     expect(b.queued).toBe(false);

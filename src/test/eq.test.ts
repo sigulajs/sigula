@@ -54,46 +54,27 @@ describe('isEqual', () => {
       expect(eq({a: {b: [1, {c: 2}]}}, {a: {b: [1, {c: 3}]}})).toBe(false);
     });
 
-    it('compares null-prototype objects', () => {
+    it('compares non-plain objects by reference only', () => {
+      const date = new Date(5);
+      expect(eq(date, date)).toBe(true);
+      expect(eq(new Date(5), new Date(5))).toBe(false);
+      expect(eq(/a/, /a/)).toBe(false);
+      expect(eq(new Map([[1, 2]]), new Map([[1, 2]]))).toBe(false);
+      expect(eq(new Set([1, 2]), new Set([1, 2]))).toBe(false);
+
       const a = Object.create(null) as Record<string, unknown>;
       const b = Object.create(null) as Record<string, unknown>;
       a.k = 1;
       b.k = 1;
-      expect(eq(a, b)).toBe(true);
-      b.k = 2;
+      expect(eq(a, a)).toBe(true);
       expect(eq(a, b)).toBe(false);
-    });
 
-    it('compares Date by timestamp', () => {
-      expect(eq(new Date(5), new Date(5))).toBe(true);
-      expect(eq(new Date(5), new Date(6))).toBe(false);
-    });
-
-    it('compares RegExp by source', () => {
-      expect(eq(/a/, /a/)).toBe(true);
-      expect(eq(/a/, /b/)).toBe(false);
-    });
-
-    it('compares Map by size then keys and values', () => {
-      expect(eq(new Map([[1, 2]]), new Map([[1, 2]]))).toBe(true);
-      expect(eq(new Map([[1, 2]]), new Map([[1, 3]]))).toBe(false);
-      expect(eq(new Map([[1, 2]]), new Map([[2, 1]]))).toBe(false);
-      expect(
-        eq(
-          new Map([[1, 2]]),
-          new Map([
-            [1, 2],
-            [3, 4],
-          ]),
-        ),
-      ).toBe(false);
-    });
-
-    it('compares Set order-sensitively', () => {
-      // the Set branch converts both to arrays and compares positionally, so
-      // insertion order matters. Pinned deliberately.
-      expect(eq(new Set([1, 2]), new Set([1, 2]))).toBe(true);
-      expect(eq(new Set([1, 2]), new Set([2, 1]))).toBe(false);
+      class P {
+        x = 1;
+      }
+      const p = new P();
+      expect(eq(p, p)).toBe(true);
+      expect(eq(new P(), new P())).toBe(false);
     });
 
     it('defers to a custom equals implementation', () => {
@@ -122,34 +103,12 @@ describe('isEqual', () => {
       expect(eq({equals: 1}, {equals: 2})).toBe(false);
       expect(eq({equals: 1}, {equals: 1})).toBe(true);
     });
-
-    it('compares instances of the same class', () => {
-      class P {
-        x = 1;
-      }
-      expect(eq(new P(), new P())).toBe(true);
-    });
   });
 
   describe('cross-type comparisons', () => {
-    // Object.keys returns [] for Date, Map, Set, RegExp, Error, [], [] class
-    // instances and typed arrays alike, so the plain-object fallback sees only
-    // indices and reports dissimilar values as equal. Every row below is
-    // currently true; the correct answer is false, and each fails for the
-    // prototype-related reason it exists.
-    //
-    // Boxed primitives are deliberately absent: new Number(1) vs 1 is already
-    // false via the typeof mismatch, and new Number(1) vs new Number(1) is
-    // true both before and after the fix, so it would pin nothing. Boxed
-    // primitives are a separate pre-existing gap, not something the prototype
-    // guard handles.
-    //
-    // The last two rows close the shape-but-not-prototype gap. The
-    // custom-prototype one is the only row that fails if the guard is weakened
-    // to a.constructor !== b.constructor: that prototype inherits constructor
-    // from Object.prototype, so the compare calls it equal to a plain object,
-    // and with no own keys on either side the key compare then agrees. Two
-    // distinct classes cannot catch it, since their constructors do differ.
+    // Values with different prototypes (or a non-plain prototype on either side)
+    // are never deeply equal, so a shape-changing write is not silently
+    // swallowed by `Sig.update`.
     const crossType: [string, unknown, unknown][] = [
       ['Date vs object', new Date(5), {}],
       ['Date vs array', new Date(5), []],
