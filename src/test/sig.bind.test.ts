@@ -554,14 +554,17 @@ describe('queue flush cap', () => {
     };
     // Two binds on one signal, each writing that signal: every task re-queues
     // the other, so the queue grows without bound.
-    createBind(s, {}, bump);
-    createBind(s, {}, bump);
+    const a = createBind(s, {}, bump);
+    const b = createBind(s, {}, bump);
 
     s.forceUpdate(1);
     await flush();
 
     expect(runs).toBe(1_000_000);
     expect(spy).toHaveBeenCalledWith(expect.stringContaining('flush exceeded'));
+    // the unrun tail is released, so the binds are not left stuck queued
+    expect(a.queued).toBe(false);
+    expect(b.queued).toBe(false);
     spy.mockRestore();
   });
 });

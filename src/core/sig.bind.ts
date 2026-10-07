@@ -43,7 +43,8 @@ let running = false;
 let scheduled = false;
 
 // Upper bound on the tasks one flush may run, so a divergent update loop cannot
-// hang the microtask. Above the 150k-bind stress test, with wide headroom.
+// hang the microtask. Far above any realistic single flush; a runaway stops
+// after roughly this many tasks instead of looping forever.
 const MAX_FLUSH = 1_000_000;
 
 const enqueue = (binds: readonly AnyBind[]): void => {
