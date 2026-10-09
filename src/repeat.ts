@@ -378,13 +378,31 @@ export const repeat = <T>(
 
   const ctx: RepeatContext<T> = {prop, tracks, boundary: toBoundary(frag)};
   const bind = createBind(sig, ctx, repeatCmd);
+  let disposed = false;
 
   return {
     type: 'view',
     node: frag,
     bind,
     boundary: () => ctx.boundary,
+    detachBinds: () => {
+      if (disposed || bind.removed) return;
+      removeBind(bind);
+      ctx.tracks.forEach((t) => t.view.detachBinds?.());
+    },
+    reattachBinds: () => {
+      if (disposed) return;
+      if (bind.removed) {
+        bind.removed = false;
+        bind.queued = false;
+        sig.addBind(bind);
+        bind.cmd(sig.get(), ctx);
+      }
+      ctx.tracks.forEach((t) => t.view.reattachBinds?.());
+    },
     cleanBinds: () => {
+      if (disposed) return;
+      disposed = true;
       removeBind(bind);
       ctx.tracks.forEach((t) => {
         t.view.cleanBinds();

@@ -14,6 +14,10 @@ export interface Patch {
   toPatchItems: ToAnyPatchItem[];
   /** Detaches the bindings created when the patch was committed. */
   cleanBinds: () => void;
+  /** Internal: pauses the patch's bindings but keeps them for reattach. */
+  detachBinds?: (() => void) | undefined;
+  /** Internal: reattaches bindings paused by `detachBinds`, catching them up. */
+  reattachBinds?: (() => void) | undefined;
 }
 
 /**

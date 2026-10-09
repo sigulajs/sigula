@@ -7,11 +7,11 @@ import {
   err,
   type Patch,
   type PatchContext,
-  removeBind,
   Sig,
   toBoundary,
   type View,
 } from './core';
+import {bindLifecycle} from './core/lifecycle';
 import {text} from './text';
 
 const MARK = `@sig_${(Math.random() * 1e9) | 0}`;
@@ -104,15 +104,10 @@ const commitPatch = (patch: Patch, node: Node) => {
     if (item.context.cleanup) cleanups.push(item.context.cleanup);
   });
 
-  let cleaned = false;
-  patch.cleanBinds = () => {
-    if (cleaned) return;
-    cleaned = true;
-    binds.forEach(removeBind);
-    cleanups.forEach((cleanup) => {
-      cleanup();
-    });
-  };
+  const life = bindLifecycle(binds, cleanups);
+  patch.cleanBinds = life.dispose;
+  patch.detachBinds = life.detach;
+  patch.reattachBinds = life.reattach;
 };
 
 // Both template passes walk the same tree hunting for the next interpolation
@@ -249,6 +244,16 @@ export const html = (
         if (endChild?.type === 'view') boundary.end = endChild.boundary().end;
       }
       return boundary;
+    },
+    detachBinds: () => {
+      children.forEach((child) => {
+        child.detachBinds?.();
+      });
+    },
+    reattachBinds: () => {
+      children.forEach((child) => {
+        child.reattachBinds?.();
+      });
     },
     cleanBinds: () => {
       children.forEach((child) => {

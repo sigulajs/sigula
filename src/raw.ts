@@ -3,11 +3,11 @@ import {
   type Boundary,
   type CmdContext,
   createBind,
-  removeBind,
   replaceWithNode,
   Sig,
   toBoundary,
 } from './core';
+import {bindLifecycle} from './core/lifecycle';
 
 interface RawContext extends CmdContext {
   boundary: Boundary;
@@ -51,13 +51,14 @@ export const raw = (source: string | Sig<string>): AnyView => {
   const bind =
     source instanceof Sig ? createBind(source, ctx, rawCmd) : undefined;
 
+  const life = bindLifecycle(bind ? [bind] : []);
   return {
     type: 'view',
     node,
     bind,
     boundary: () => ctx.boundary,
-    cleanBinds: () => {
-      if (bind) removeBind(bind);
-    },
+    cleanBinds: life.dispose,
+    detachBinds: life.detach,
+    reattachBinds: life.reattach,
   };
 };

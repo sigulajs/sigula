@@ -29,6 +29,17 @@ export interface View<T = unknown, C extends CmdContext = any> {
   bind?: Bind<T, C> | undefined;
   /** Detaches the view's bindings and, recursively, those of its children. */
   cleanBinds: () => void;
+  /**
+   * Internal: removes the view's bindings from their signals but keeps them so
+   * {@link reattachBinds} can restore them. Used when a control-flow view swaps
+   * the view out without disposing it.
+   */
+  detachBinds?: (() => void) | undefined;
+  /**
+   * Internal: re-adds bindings removed by {@link detachBinds} and runs each
+   * once to catch up to the current signal values.
+   */
+  reattachBinds?: (() => void) | undefined;
   /** Returns the nodes the view currently occupies. */
   boundary: () => Boundary;
 

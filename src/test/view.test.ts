@@ -1,5 +1,5 @@
 import {beforeEach, describe, expect, it} from 'vitest';
-import {compute, html, render, repeat, sig, text, view} from '..';
+import {attr, compute, html, patch, render, repeat, sig, text, view} from '..';
 
 describe('view', () => {
   beforeEach(() => {
@@ -160,6 +160,138 @@ describe('view', () => {
     flag.update(true);
     await Promise.resolve();
     expect(document.body.innerHTML).toBe('<div>shared</div>');
+  });
+
+  it('keeps a shared html view reactive after it is put back', async () => {
+    const counter = sig(1);
+    const shared = html`<b>${text(counter)}</b>`;
+    const flag = sig(true);
+
+    render(
+      html`<div>${view(flag, (v) => (v ? shared : text('off')))}</div>`,
+      document.body,
+    );
+    expect(document.body.innerHTML).toBe('<div><b>1</b></div>');
+
+    flag.update(false);
+    await Promise.resolve();
+    expect(document.body.innerHTML).toBe('<div>off</div>');
+    expect(counter.getBinds().length).toBe(0);
+
+    flag.update(true);
+    await Promise.resolve();
+    expect(document.body.innerHTML).toBe('<div><b>1</b></div>');
+    expect(counter.getBinds().length).toBe(1);
+
+    counter.update(2);
+    await Promise.resolve();
+    expect(document.body.innerHTML).toBe('<div><b>2</b></div>');
+  });
+
+  it('catches a shared view up to changes made while it was hidden', async () => {
+    const counter = sig(1);
+    const shared = html`<b>${text(counter)}</b>`;
+    const flag = sig(true);
+
+    render(
+      html`<div>${view(flag, (v) => (v ? shared : text('off')))}</div>`,
+      document.body,
+    );
+
+    flag.update(false);
+    await Promise.resolve();
+    counter.update(7);
+    await Promise.resolve();
+
+    flag.update(true);
+    await Promise.resolve();
+    expect(document.body.innerHTML).toBe('<div><b>7</b></div>');
+  });
+
+  it('keeps a shared view with patch bindings reactive after put-back', async () => {
+    const title = sig('a');
+    const shared = html`<span ${patch(attr('data-x', title))}>x</span>`;
+    const flag = sig(true);
+
+    render(
+      html`<div>${view(flag, (v) => (v ? shared : text('off')))}</div>`,
+      document.body,
+    );
+    expect(document.querySelector('span')?.getAttribute('data-x')).toBe('a');
+
+    flag.update(false);
+    await Promise.resolve();
+    title.update('b');
+    await Promise.resolve();
+
+    flag.update(true);
+    await Promise.resolve();
+    expect(document.querySelector('span')?.getAttribute('data-x')).toBe('b');
+
+    title.update('c');
+    await Promise.resolve();
+    expect(document.querySelector('span')?.getAttribute('data-x')).toBe('c');
+  });
+
+  it('keeps a shared repeat view reactive after put-back', async () => {
+    const items = sig([1, 2]);
+    const tag = sig('a');
+    const shared = html`<ul>${repeat(items, {
+      key: (n) => String(n),
+      view: (n) => html`<li>${text(tag)}${text(n)}</li>`,
+    })}</ul>`;
+    const flag = sig(true);
+
+    render(
+      html`<div>${view(flag, (v) => (v ? shared : text('off')))}</div>`,
+      document.body,
+    );
+    expect(document.body.innerHTML).toBe(
+      '<div><ul><li>a1</li><li>a2</li></ul></div>',
+    );
+    expect(tag.getBinds().length).toBe(2);
+
+    flag.update(false);
+    await Promise.resolve();
+    expect(tag.getBinds().length).toBe(0);
+
+    flag.update(true);
+    await Promise.resolve();
+    expect(document.body.innerHTML).toBe(
+      '<div><ul><li>a1</li><li>a2</li></ul></div>',
+    );
+    expect(tag.getBinds().length).toBe(2);
+
+    tag.update('b');
+    await Promise.resolve();
+    expect(document.body.innerHTML).toBe(
+      '<div><ul><li>b1</li><li>b2</li></ul></div>',
+    );
+  });
+
+  it('reconciles a hidden nested control-flow view on put-back', async () => {
+    const inner = sig(1);
+    const wrapper = view(sig(true), (s) => (s ? text(inner) : text('x')));
+    const showWrapper = sig(true);
+
+    render(
+      html`<div>${view(showWrapper, (v) => (v ? wrapper : text('off')))}</div>`,
+      document.body,
+    );
+    expect(document.body.innerHTML).toBe('<div>1</div>');
+
+    showWrapper.update(false);
+    await Promise.resolve();
+    inner.update(2);
+    await Promise.resolve();
+
+    showWrapper.update(true);
+    await Promise.resolve();
+    expect(document.body.innerHTML).toBe('<div>2</div>');
+
+    inner.update(3);
+    await Promise.resolve();
+    expect(document.body.innerHTML).toBe('<div>3</div>');
   });
 
   it('keeps the content when viewFn returns the mounted view again', async () => {

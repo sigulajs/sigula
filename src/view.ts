@@ -11,9 +11,11 @@ import {
 const viewCmd = <T>(val: T, ctx: ViewContext<T>) => {
   const newInner = ctx.viewFn(val);
   if (newInner === ctx.inner) return;
-  const oldBoundary = ctx.inner.boundary();
+  const oldInner = ctx.inner;
+  const oldBoundary = oldInner.boundary();
   replaceWithView(oldBoundary, newInner);
-  ctx.inner.cleanBinds();
+  oldInner.detachBinds?.();
+  newInner.reattachBinds?.();
   ctx.inner = newInner;
 };
 
@@ -44,13 +46,31 @@ export const view = <T>(
   };
 
   const bind = createBind(sig, ctx, viewCmd);
+  let disposed = false;
 
   return {
     type: 'view',
     node: inner.node,
     bind,
     boundary: () => ctx.inner.boundary(),
+    detachBinds: () => {
+      if (disposed || bind.removed) return;
+      removeBind(bind);
+      ctx.inner.detachBinds?.();
+    },
+    reattachBinds: () => {
+      if (disposed) return;
+      if (bind.removed) {
+        bind.removed = false;
+        bind.queued = false;
+        sig.addBind(bind);
+        bind.cmd(sig.get(), ctx);
+      }
+      ctx.inner.reattachBinds?.();
+    },
     cleanBinds: () => {
+      if (disposed) return;
+      disposed = true;
       removeBind(bind);
       ctx.inner.cleanBinds();
     },

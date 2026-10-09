@@ -28,6 +28,16 @@ export const composeViews = (views: AnyView[], empty?: Node): View => {
       const last = at(views, views.length - 1);
       return {start: first.boundary().start, end: last.boundary().end};
     },
+    detachBinds: () => {
+      views.forEach((view) => {
+        view.detachBinds?.();
+      });
+    },
+    reattachBinds: () => {
+      views.forEach((view) => {
+        view.reattachBinds?.();
+      });
+    },
     cleanBinds: () => {
       views.forEach((view) => {
         view.cleanBinds();
