@@ -5,7 +5,7 @@ import {
   toBoundary,
   type View,
 } from './core';
-import {detachBinds, reattachBinds} from './core/lifecycle';
+import {detachBind, reattachBind} from './core/lifecycle';
 
 const textCmd = <T>(val: T, ctx: PatchContext) => {
   ctx.node.textContent = String(val);
@@ -32,18 +32,16 @@ export const text = <T>(source: T | Sig<T>): View<T, PatchContext> => {
   const bind =
     source instanceof Sig ? createBind(source, ctx, textCmd) : undefined;
   const boundary = toBoundary(text);
-  const binds = bind ? [bind] : [];
   return {
     type: 'view',
     node: text,
     bind,
-    attached: true,
     boundary: () => boundary,
-    detach() {
-      detachBinds(this, binds);
+    detach: () => {
+      detachBind(bind);
     },
-    reattach() {
-      reattachBinds(this, binds);
+    reattach: () => {
+      reattachBind(bind);
     },
   };
 };

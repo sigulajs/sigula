@@ -753,7 +753,6 @@ The unit returned by `html`, `text`, `raw`, `view`, `repeat`, `list`, and
 - `type` — Discriminant identifying a view.
 - `node` — The DOM node or `DocumentFragment` the view occupies.
 - `bind` — The view's own binding, when it is reactive.
-- `attached` — Whether the view's bindings are currently attached to their signals.
 - `detach` — Tears down the view's bindings and, recursively, those of its children, and runs any teardown cleanups. The bind objects are released so `reattach` can restore them.
 - `reattach` — Re-adds bindings removed by `detach` and catches them up.
 - `boundary` — Returns the nodes the view currently occupies.

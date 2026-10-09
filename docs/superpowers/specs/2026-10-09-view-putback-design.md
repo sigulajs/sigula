@@ -68,29 +68,31 @@ the empty node. This is a put-back, not a second `commit`, so it does not raise
 
 ### Bind mechanics
 
-Two stateless helpers, `detachBinds(owner, binds, cleanups)` and
-`reattachBinds(owner, binds)`, own the flat bind-list loop. The `attached` flag
-lives on the owner (`View`/`Patch`) and starts true because callers register binds
-before constructing it. `detachBinds` removes the binds and runs the cleanups;
-`reattachBinds` resets `removed`/`queued`, re-adds each bind to its signal, and
-runs its command once. The public `detach()`/`reattach()` methods delegate to the
-helpers; views with children recurse over them behind the same `attached` guard.
+The attach state is derived where possible instead of stored:
 
-Commands register their teardown on `ctx.detach` (previously `ctx.cleanup`), which
-`commitPatch` collects and runs from `detachBinds`. Event handlers (`on`) and
-`ref` are one-shot items, not binds, so `reattach` does not re-run them and does
-not double-register listeners.
+- `text`/`raw`/`view`/`repeat` own a single bind, so `bind.removed` is the
+  attached flag; they call `detachBind(bind)` / `reattachBind(bind)`.
+- `html`/`compose` own no binds; their `detach`/`reattach` just recurse, and the
+  recursion is idempotent because the leaves are guarded.
+- `Patch` can own many binds plus one-shot cleanups, so it carries an `attached`
+  flag and uses `detachBinds(owner, binds, cleanups)` / `reattachBinds(owner, binds)`.
+
+The helpers reset `removed`/`queued`, re-add each bind to its signal, and run its
+command once to catch up. Commands register their teardown on `ctx.detach`
+(previously `ctx.cleanup`), which `commitPatch` collects and runs from
+`detachBinds`. Event handlers (`on`) and `ref` are one-shot items, not binds, so
+`reattach` does not re-run them and does not double-register listeners.
 
 ## Changes by file
 
 | File | Change |
 |---|---|
-| `core/view.core.ts` | `attached`/`detach`/`reattach` on `View`; fragment-aware `replaceWithView` |
+| `core/view.core.ts` | `detach`/`reattach` on `View`; fragment-aware `replaceWithView` |
 | `core/patch.core.ts` | `attached`/`detach`/`reattach` on `Patch`; `ctx.cleanup` -> `ctx.detach` |
-| `core/lifecycle.ts` | `detachBinds`/`reattachBinds` helpers + `Binder` |
+| `core/lifecycle.ts` | `detachBind`/`reattachBind` + `detachBinds`/`reattachBinds` + `Binder` |
 | `core/compose.ts` | recurse detach/reattach over child views |
 | `html.ts` | `commitPatch` installs the helpers; view recurses over `children` |
-| `text.ts`, `raw.ts` | bind list passed to the helpers |
+| `text.ts`, `raw.ts` | single bind passed to `detachBind`/`reattachBind` |
 | `view.ts` | `viewCmd` detach/reattach; own bind + `ctx.inner` recurse |
 | `repeat.ts` | recurse over tracks + own bind; `_cleanTrack` detaches |
 | `render.ts` | disposer calls `view.detach()` |

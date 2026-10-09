@@ -6,7 +6,7 @@ import {
   type View,
   type ViewContext,
 } from './core';
-import {detachBinds, reattachBinds} from './core/lifecycle';
+import {detachBind, reattachBind} from './core/lifecycle';
 
 const viewCmd = <T>(val: T, ctx: ViewContext<T>) => {
   const newInner = ctx.viewFn(val);
@@ -51,16 +51,13 @@ export const view = <T>(
     type: 'view',
     node: inner.node,
     bind,
-    attached: true,
     boundary: () => ctx.inner.boundary(),
-    detach() {
-      if (!this.attached) return;
-      detachBinds(this, [bind]);
+    detach: () => {
+      detachBind(bind);
       ctx.inner.detach();
     },
-    reattach() {
-      if (this.attached) return;
-      reattachBinds(this, [bind]);
+    reattach: () => {
+      reattachBind(bind);
       ctx.inner.reattach();
     },
   };

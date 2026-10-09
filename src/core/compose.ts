@@ -7,7 +7,6 @@ export const composeViews = (views: AnyView[], empty?: Node): View => {
     return {
       type: 'view',
       node,
-      attached: true,
       boundary: () => ({start: node, end: node}),
       detach: () => {},
       reattach: () => {},
@@ -22,7 +21,6 @@ export const composeViews = (views: AnyView[], empty?: Node): View => {
   return {
     type: 'view',
     node,
-    attached: true,
     // Derive the boundary from the child views on demand: an edge view() can
     // swap its root node, and a boundary captured at construction would point
     // at the detached old node, leaking on teardown.
@@ -31,16 +29,12 @@ export const composeViews = (views: AnyView[], empty?: Node): View => {
       const last = at(views, views.length - 1);
       return {start: first.boundary().start, end: last.boundary().end};
     },
-    detach() {
-      if (!this.attached) return;
-      this.attached = false;
+    detach: () => {
       views.forEach((view) => {
         view.detach();
       });
     },
-    reattach() {
-      if (this.attached) return;
-      this.attached = true;
+    reattach: () => {
       views.forEach((view) => {
         view.reattach();
       });

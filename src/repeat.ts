@@ -14,7 +14,7 @@ import {
   type View,
   walkBoundary,
 } from './core';
-import {detachBinds, reattachBinds} from './core/lifecycle';
+import {detachBind, reattachBind} from './core/lifecycle';
 
 /**
  * Options for {@link repeat}.
@@ -383,18 +383,15 @@ export const repeat = <T>(
     type: 'view',
     node: frag,
     bind,
-    attached: true,
     boundary: () => ctx.boundary,
-    detach() {
-      if (!this.attached) return;
-      detachBinds(this, [bind]);
+    detach: () => {
+      detachBind(bind);
       ctx.tracks.forEach((t) => {
         t.view.detach();
       });
     },
-    reattach() {
-      if (this.attached) return;
-      reattachBinds(this, [bind]);
+    reattach: () => {
+      reattachBind(bind);
       ctx.tracks.forEach((t) => {
         t.view.reattach();
       });

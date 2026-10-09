@@ -248,17 +248,12 @@ export const html = (
       }
       return boundary;
     },
-    attached: true,
-    detach() {
-      if (!this.attached) return;
-      this.attached = false;
+    detach: () => {
       children.forEach((child) => {
         child.detach();
       });
     },
-    reattach() {
-      if (this.attached) return;
-      this.attached = true;
+    reattach: () => {
       children.forEach((child) => {
         child.reattach();
       });

@@ -27,8 +27,6 @@ export interface View<T = unknown, C extends CmdContext = any> {
   node: Node;
   /** The view's own binding, when it is reactive. */
   bind?: Bind<T, C> | undefined;
-  /** Whether the view's bindings are currently attached to their signals. */
-  attached: boolean;
   /**
    * Tears down the view's bindings and, recursively, those of its children, and
    * runs any teardown cleanups. The bind objects are released so {@link
