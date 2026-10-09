@@ -1,5 +1,6 @@
-import {type Boundary, replaceWithNode} from './boundary';
+import {type Boundary, removeBoundary, replaceWithNode} from './boundary';
 import type {CmdContext} from './cmd';
+import {err} from './err';
 import type {Patch} from './patch.core';
 import type {Bind} from './sig.bind';
 
@@ -68,5 +69,27 @@ export interface ViewContext<T> extends CmdContext {
  * @returns the boundary of the mounted view.
  * @group Templates
  */
-export const replaceWithView = (old: Boundary, view: View): Boundary =>
-  replaceWithNode(old, view.node);
+export const replaceWithView = (old: Boundary, view: View): Boundary => {
+  const node = view.node;
+  // A view backed by a fragment is emptied the first time it is mounted: its
+  // children move into the document and the fragment is left with none. When
+  // the same instance is shown again its live nodes are its boundary, so move
+  // those back rather than the (now empty) node. This is how `view()` restores
+  // a view it swapped out; it is not a second `commit` of the same node.
+  if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE && !node.firstChild) {
+    const next = view.boundary();
+    const parent = old.start.parentNode;
+    if (!parent) err('E3');
+    const nodes: Node[] = [];
+    let n: Node | null = next.start;
+    while (n) {
+      nodes.push(n);
+      if (n === next.end) break;
+      n = n.nextSibling;
+    }
+    for (const node of nodes) parent.insertBefore(node, old.start);
+    removeBoundary(old);
+    return next;
+  }
+  return replaceWithNode(old, node);
+};

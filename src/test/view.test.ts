@@ -124,6 +124,56 @@ describe('view', () => {
     expect(document.body.innerHTML).toBe('<p>18</p>');
   });
 
+  it('puts a shared fragment view back when it is shown again', async () => {
+    const shared = html`<b>shared</b>`;
+    const flag = sig(true);
+
+    render(
+      html`<div>${view(flag, (v) => (v ? shared : text('other')))}</div>`,
+      document.body,
+    );
+    expect(document.body.innerHTML).toBe('<div><b>shared</b></div>');
+
+    flag.update(false);
+    await Promise.resolve();
+    expect(document.body.innerHTML).toBe('<div>other</div>');
+
+    flag.update(true);
+    await Promise.resolve();
+    expect(document.body.innerHTML).toBe('<div><b>shared</b></div>');
+  });
+
+  it('puts a shared single-node view back when it is shown again', async () => {
+    const shared = text('shared');
+    const flag = sig(true);
+
+    render(
+      html`<div>${view(flag, (v) => (v ? shared : text('other')))}</div>`,
+      document.body,
+    );
+    expect(document.body.innerHTML).toBe('<div>shared</div>');
+
+    flag.update(false);
+    await Promise.resolve();
+    expect(document.body.innerHTML).toBe('<div>other</div>');
+
+    flag.update(true);
+    await Promise.resolve();
+    expect(document.body.innerHTML).toBe('<div>shared</div>');
+  });
+
+  it('keeps the content when viewFn returns the mounted view again', async () => {
+    const shared = html`<b>shared</b>`;
+    const flag = sig(true);
+
+    render(html`<div>${view(flag, () => shared)}</div>`, document.body);
+    expect(document.body.innerHTML).toBe('<div><b>shared</b></div>');
+
+    flag.notify();
+    await Promise.resolve();
+    expect(document.body.innerHTML).toBe('<div><b>shared</b></div>');
+  });
+
   it('keeps propagating after a computed value is re-shown', async () => {
     const source = sig(1);
     const doubled = compute(source, (v) => v * 2);

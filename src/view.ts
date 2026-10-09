@@ -9,8 +9,9 @@ import {
 } from './core';
 
 const viewCmd = <T>(val: T, ctx: ViewContext<T>) => {
-  const oldBoundary = ctx.inner.boundary();
   const newInner = ctx.viewFn(val);
+  if (newInner === ctx.inner) return;
+  const oldBoundary = ctx.inner.boundary();
   replaceWithView(oldBoundary, newInner);
   ctx.inner.cleanBinds();
   ctx.inner = newInner;
