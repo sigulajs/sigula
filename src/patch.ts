@@ -78,7 +78,13 @@ export function patch(
       : first
         ? [..._propsToItems(first), ...rest]
         : rest;
-  return {type: 'patch', toPatchItems, cleanBinds: _noop};
+  return {
+    type: 'patch',
+    toPatchItems,
+    attached: true,
+    detach: _noop,
+    reattach: _noop,
+  };
 }
 
 /**
@@ -286,7 +292,7 @@ const refCmd = (_val: null, ctx: PatchContext) => {
   const target = ctx.extra?.[0] as Sig<Element | null> | undefined;
   if (!target) return;
   target.update(ctx.node as Element);
-  ctx.cleanup = () => target.update(null);
+  ctx.detach = () => target.update(null);
 };
 
 /**

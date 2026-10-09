@@ -12,12 +12,15 @@ export interface Patch {
   type: 'patch';
   /** Deferred patch-item factories, resolved against the target element on mount. */
   toPatchItems: ToAnyPatchItem[];
-  /** Detaches the bindings created when the patch was committed. */
-  cleanBinds: () => void;
-  /** Internal: pauses the patch's bindings but keeps them for reattach. */
-  detachBinds?: (() => void) | undefined;
-  /** Internal: reattaches bindings paused by `detachBinds`, catching them up. */
-  reattachBinds?: (() => void) | undefined;
+  /** Whether the patch's bindings are currently attached to their signals. */
+  attached: boolean;
+  /**
+   * Tears down the bindings created when the patch was committed, keeping them
+   * so {@link reattach} can restore them.
+   */
+  detach: () => void;
+  /** Re-adds bindings removed by {@link detach} and catches them up. */
+  reattach: () => void;
 }
 
 /**
@@ -30,8 +33,8 @@ export interface PatchContext extends CmdContext {
   node: Node;
   /** Extra arguments for the command, such as the attribute or style key. */
   extra?: unknown[];
-  // Internal: a teardown hook a command can register for `patch.cleanBinds`.
-  cleanup?: () => void;
+  // Internal: a teardown hook a command can register; runs on `patch.detach`.
+  detach?: () => void;
 }
 
 /**

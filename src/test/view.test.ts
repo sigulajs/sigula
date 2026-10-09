@@ -1,5 +1,16 @@
 import {beforeEach, describe, expect, it} from 'vitest';
-import {attr, compute, html, patch, render, repeat, sig, text, view} from '..';
+import {
+  attr,
+  compute,
+  html,
+  patch,
+  ref,
+  render,
+  repeat,
+  sig,
+  text,
+  view,
+} from '..';
 
 describe('view', () => {
   beforeEach(() => {
@@ -292,6 +303,22 @@ describe('view', () => {
     inner.update(3);
     await Promise.resolve();
     expect(document.body.innerHTML).toBe('<div>3</div>');
+  });
+
+  it('resets a shared view ref when it is swapped out', async () => {
+    const target = sig<Element | null>(null);
+    const shared = html`<span ${patch(ref(target))}></span>`;
+    const flag = sig(true);
+
+    render(
+      html`<div>${view(flag, (v) => (v ? shared : text('off')))}</div>`,
+      document.body,
+    );
+    expect(target.get()?.tagName).toBe('SPAN');
+
+    flag.update(false);
+    await Promise.resolve();
+    expect(target.get()).toBeNull();
   });
 
   it('keeps the content when viewFn returns the mounted view again', async () => {

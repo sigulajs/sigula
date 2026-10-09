@@ -1,12 +1,12 @@
 import {
   type AnyView,
   createBind,
-  removeBind,
   replaceWithView,
   type Sig,
   type View,
   type ViewContext,
 } from './core';
+import {detachBinds, reattachBinds} from './core/lifecycle';
 
 const viewCmd = <T>(val: T, ctx: ViewContext<T>) => {
   const newInner = ctx.viewFn(val);
@@ -14,8 +14,8 @@ const viewCmd = <T>(val: T, ctx: ViewContext<T>) => {
   const oldInner = ctx.inner;
   const oldBoundary = oldInner.boundary();
   replaceWithView(oldBoundary, newInner);
-  oldInner.detachBinds?.();
-  newInner.reattachBinds?.();
+  oldInner.detach();
+  newInner.reattach();
   ctx.inner = newInner;
 };
 
@@ -46,33 +46,22 @@ export const view = <T>(
   };
 
   const bind = createBind(sig, ctx, viewCmd);
-  let disposed = false;
 
   return {
     type: 'view',
     node: inner.node,
     bind,
+    attached: true,
     boundary: () => ctx.inner.boundary(),
-    detachBinds: () => {
-      if (disposed || bind.removed) return;
-      removeBind(bind);
-      ctx.inner.detachBinds?.();
+    detach() {
+      if (!this.attached) return;
+      detachBinds(this, [bind]);
+      ctx.inner.detach();
     },
-    reattachBinds: () => {
-      if (disposed) return;
-      if (bind.removed) {
-        bind.removed = false;
-        bind.queued = false;
-        sig.addBind(bind);
-        bind.cmd(sig.get(), ctx);
-      }
-      ctx.inner.reattachBinds?.();
-    },
-    cleanBinds: () => {
-      if (disposed) return;
-      disposed = true;
-      removeBind(bind);
-      ctx.inner.cleanBinds();
+    reattach() {
+      if (this.attached) return;
+      reattachBinds(this, [bind]);
+      ctx.inner.reattach();
     },
   };
 };

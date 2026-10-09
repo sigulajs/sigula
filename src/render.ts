@@ -25,6 +25,6 @@ export const render = (
 
   return () => {
     removeBoundary(view.boundary());
-    view.cleanBinds();
+    view.detach();
   };
 };

@@ -6,7 +6,6 @@ import {
   createBind,
   eq,
   err,
-  removeBind,
   removeBoundary,
   replaceWithNode,
   replaceWithView,
@@ -15,6 +14,7 @@ import {
   type View,
   walkBoundary,
 } from './core';
+import {detachBinds, reattachBinds} from './core/lifecycle';
 
 /**
  * Options for {@link repeat}.
@@ -66,7 +66,7 @@ export interface RepeatContext<T> extends CmdContext {
 
 const _cleanTrack = <T>(track: Track<T>) => {
   removeBoundary(track.view.boundary());
-  track.view.cleanBinds();
+  track.view.detach();
   track.cleaned = true;
 };
 
@@ -378,34 +378,25 @@ export const repeat = <T>(
 
   const ctx: RepeatContext<T> = {prop, tracks, boundary: toBoundary(frag)};
   const bind = createBind(sig, ctx, repeatCmd);
-  let disposed = false;
 
   return {
     type: 'view',
     node: frag,
     bind,
+    attached: true,
     boundary: () => ctx.boundary,
-    detachBinds: () => {
-      if (disposed || bind.removed) return;
-      removeBind(bind);
-      ctx.tracks.forEach((t) => t.view.detachBinds?.());
-    },
-    reattachBinds: () => {
-      if (disposed) return;
-      if (bind.removed) {
-        bind.removed = false;
-        bind.queued = false;
-        sig.addBind(bind);
-        bind.cmd(sig.get(), ctx);
-      }
-      ctx.tracks.forEach((t) => t.view.reattachBinds?.());
-    },
-    cleanBinds: () => {
-      if (disposed) return;
-      disposed = true;
-      removeBind(bind);
+    detach() {
+      if (!this.attached) return;
+      detachBinds(this, [bind]);
       ctx.tracks.forEach((t) => {
-        t.view.cleanBinds();
+        t.view.detach();
+      });
+    },
+    reattach() {
+      if (this.attached) return;
+      reattachBinds(this, [bind]);
+      ctx.tracks.forEach((t) => {
+        t.view.reattach();
       });
     },
   };

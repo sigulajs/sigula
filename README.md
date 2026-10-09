@@ -161,7 +161,7 @@ Runnable versions live in [`examples/`](./examples) (`quickstart`, `equation`, `
         │                                               │
   Cmd ──┤  (value, context) => void                     │  the work
         │                                               │
-  View ─┤  { node, boundary(), cleanBinds() }           │  DOM region
+  View ─┤  { node, boundary(), detach(), reattach() }   │  DOM region
   Patch ┤  deferred commands for one element            │
         │                                               │
   Queue ┤  one global microtask, coalesced per Bind     │  scheduling
@@ -296,7 +296,7 @@ Two consequences worth knowing:
 1. **One `Patch` per element.** The marker is an attribute, so a second `patch()` on the same element cannot be located. Combine everything into a single `patch(...)` call — that is what its variadic form is for.
 2. **Templates are cached per call site** (a `WeakMap` on the `TemplateStringsArray`), and the cache key includes the *mix* of patch/view slots (a bitmask for up to 31 slots, a string beyond that). Repeated renders skip parsing entirely; a call site that changes its interpolation mix simply gets a fresh template.
 
-The returned `View` is `{node, children, boundary(), cleanBinds()}` — see [Boundaries](#boundaries-and-teardown).
+The returned `View` is `{node, children, boundary(), detach(), reattach()}` — see [Boundaries](#boundaries-and-teardown).
 
 ### Patching an element: `patch`
 
@@ -370,10 +370,10 @@ Teardown is explicit and recursive:
 
 ```ts
 const dispose = render(App(), app);
-dispose();   // removeBoundary(view.boundary()) + view.cleanBinds()
+dispose();   // removeBoundary(view.boundary()) + view.detach()
 ```
 
-`cleanBinds()` detaches the view's own bind and, recursively, all child binds. When a `Sig` loses its last bind it calls `cleanup()`, so a subtree that is removed stops receiving updates immediately — no manual effect cleanup, no leak by default.
+`detach()` removes the view's own bind and, recursively, all child binds, and runs any command cleanups (such as `ref` resetting its `Sig` to `null`). When a `Sig` loses its last bind it calls `cleanup()`, so a subtree that is removed stops receiving updates immediately — no manual effect cleanup, no leak by default. `reattach()` re-adds the same binds and catches them up, which is how `view()` puts a swapped-out view back with its reactivity intact.
 
 ### The update queue
 

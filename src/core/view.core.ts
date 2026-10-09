@@ -27,19 +27,16 @@ export interface View<T = unknown, C extends CmdContext = any> {
   node: Node;
   /** The view's own binding, when it is reactive. */
   bind?: Bind<T, C> | undefined;
-  /** Detaches the view's bindings and, recursively, those of its children. */
-  cleanBinds: () => void;
+  /** Whether the view's bindings are currently attached to their signals. */
+  attached: boolean;
   /**
-   * Internal: removes the view's bindings from their signals but keeps them so
-   * {@link reattachBinds} can restore them. Used when a control-flow view swaps
-   * the view out without disposing it.
+   * Tears down the view's bindings and, recursively, those of its children, and
+   * runs any teardown cleanups. The bind objects are released so {@link
+   * reattach} can restore them.
    */
-  detachBinds?: (() => void) | undefined;
-  /**
-   * Internal: re-adds bindings removed by {@link detachBinds} and runs each
-   * once to catch up to the current signal values.
-   */
-  reattachBinds?: (() => void) | undefined;
+  detach: () => void;
+  /** Re-adds bindings removed by {@link detach} and catches them up. */
+  reattach: () => void;
   /** Returns the nodes the view currently occupies. */
   boundary: () => Boundary;
 
