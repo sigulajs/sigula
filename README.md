@@ -64,7 +64,7 @@ render(html`<h1>Hello, ${name}!</h1>`, app);
 name.update('Bob'); // → "Hello, Bob!"
 ```
 
-A `Sig` interpolated in a **content position** is upgraded to a `text()` view automatically, so `${name}` and `${text(name)}` are equivalent.
+`sig` creates a **signal** — a value container. Interpolating a signal in a content position upgrades it to a text() view automatically, so ${name} and ${text(name)} are equivalent. When name.update('Bob') runs, Sigula writes to just that text node and touches nothing else.
 
 ### 3. Handle events and patch attributes
 
@@ -104,47 +104,39 @@ render(html`<main>${Counter(0)} ${Counter(100)}</main>`, app);
 
 Because the function body runs exactly once, `sig(initial)` *is* the local state — no hooks, no `this`, no re-run semantics to reason about.
 
-### 5. Render lists conditionally
+### 5. Control flow
 
 ```ts
-import {compute, html, on, patch, render, repeat, sig, text, val, view} from 'sigula';
+import {html, list, repeat, sig} from 'sigula';
 
-interface Todo { id: number; text: string; done: boolean }
+const fruits = ['apple', 'banana', 'cherry'];      // static — rendered once
+const todos = sig([{id: 1, label: 'write docs'}]); // reactive — keyed
 
-const Todos = () => {
-  const input = sig('');
-  const todos = sig<Todo[]>([]);
-  const filter = sig<'all' | 'active'>('all');
+html`<div>
+  <ul>${list(fruits, (fruit) => html`<li>${fruit}</li>`)}</ul>
 
-  const visible = compute({todos, filter}, (v) =>
-    v.filter === 'active' ? v.todos.filter((t) => !t.done) : v.todos,
-  );
-  const isEmpty = compute(visible, (v) => v.length === 0);
-
-  const add = (e: Event) => {
-    e.preventDefault();
-    if (!input.get().trim()) return;
-    todos.trans((items) => [...items, {id: Date.now(), text: input.get().trim(), done: false}]);
-    input.update('');
-  };
-
-  return html`<form ${patch(on('submit', add))}>
-      <input ${patch(val(input), on('change', (e) => input.update((e.target as HTMLInputElement).value)))} />
-      <button>Add</button>
-    </form>
-    ${view(isEmpty, (empty) =>
-      empty
-        ? text('Nothing here yet')
-        : html`<ul>${repeat(visible, {
-            key: (t) => t.id.toString(),
-            view: (t) => html`<li>${text(t.text)}</li>`,
-          })}</ul>`,
-    )}`;
-};
-
-const dispose = render(Todos(), app);
-dispose(); // detaches every binding and removes the nodes
+  <ul>${repeat(todos, {
+    key: (t) => String(t.id),
+    view: (t) => html`<li>${t.label}</li>`,
+  })}</ul>
+</div>`;
 ```
+
+Use `list(items, viewFn)` for a fixed array: it calls `viewFn` once per item and appends the results, with no keying or reconciliation. Use `repeat(sig, {key, view})` for a reactive array: it matches items by `key` and reuses, moves, creates, or removes as few DOM nodes as possible.
+
+
+```ts
+import {compute, html, sig, text, view} from 'sigula';
+
+const count = sig(0);
+const isEmpty = compute(count, (v) => v === 0);
+
+html`<div>${view(isEmpty, (empty) =>
+  empty ? text('nothing yet') : html`<p>count: ${count}</p>`,
+)}</div>`;
+```
+`compute` turns one signal into another: here `isEmpty` is derived from `count`. `view(sig, viewFn)` then swaps the rendered view whenever that signal changes — when `count` becomes non-zero the empty message is replaced with the paragraph, and the old view is torn down.
+
 
 Runnable versions live in [`examples/`](./examples) (`quickstart`, `equation`, `filtertodos`).
 
